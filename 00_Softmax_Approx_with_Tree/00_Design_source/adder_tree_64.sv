@@ -1,155 +1,161 @@
 module add_tree_64 (
-    input clk,
-    input en,
-    input rst,
+    // Operation signals
+    input  wire           i_clk,
+    input  wire           i_en,
+    input  wire           i_rst,
 
-    input [1:0] length_mode,
+    // Length mode input
+    input  wire    [1:0]  i_length_mode,
 
-    input valid_in,
-    input [1023:0] in_0_flat,
-    input [1023:0] in_1_flat,
+    // Data input signals
+    input  wire           i_valid,
+    input  wire [1023:0]  i_in0_flat,
+    input  wire [1023:0]  i_in1_flat,
 
-    output [15:0] in_1_sum_64_0,
+    // Data output signals
+    output wire    [15:0] o_sum64_0,
+    output wire    [15:0] o_sum32_0,
+    output wire    [15:0] o_sum32_1,
+    output wire    [15:0] o_sum16_0,
+    output wire    [15:0] o_sum16_1,
+    output wire    [15:0] o_sum16_2,
+    output wire    [15:0] o_sum16_3,
 
-    output [15:0] in_1_sum_32_0,
-    output [15:0] in_1_sum_32_1,
-
-    output [15:0] in_1_sum_16_0,
-    output [15:0] in_1_sum_16_1,
-    output [15:0] in_1_sum_16_2,
-    output [15:0] in_1_sum_16_3,
-
-    output [1:0] length_mode_bypass,
-    output valid_bypass_out,
-    output [1023:0] in_bypass_flat
+    // Bypass outputs
+    output wire    [1:0]  o_length_mode_byp,
+    output wire           o_valid_byp,
+    output wire [1023:0]  o_in0_byp
 );
+    // Stage data signals
+    wire [15:0] stg_data [0:6][0:63];
 
-    wire [15:0] stage_data [0:6][0:63];
+    // Bypass registers (12 stages)
+    reg    [1:0]  r_length_mode_byp [0:11];
+    reg           r_valid_byp       [0:11];
+    reg [1023:0]  r_in0_byp         [0:11];
 
-    reg [1:0] reg_length_mode_bypass [5:0];
-    reg [11:0] reg_valid_bypass;
-    reg [1023:0] reg_bypass [0:11];
-
-    integer k;
-    always @(posedge clk) begin
-        if (rst) begin
-            for (k = 0; k <= 11; k = k + 1) begin
-                reg_length_mode_bypass[k] <= 2'b0;
-                reg_valid_bypass[k] <= 1'b0;
-                reg_bypass[k] <= {64{16'd0}};
+    // Bypass pipeline (12 stages)
+    always @(posedge i_clk) begin
+        if (i_rst) begin
+            for (integer k = 0; k <= 11; k = k + 1) begin
+                r_length_mode_byp[k] <= 2'b0;
+                r_valid_byp      [k] <= 1'b0;
+                r_in0_byp        [k] <= 1024'd0;
             end
         end
-        else if (en) begin
-            reg_length_mode_bypass[0] <= length_mode;
-            reg_valid_bypass[0] <= valid_in;
-            reg_bypass[0] <= in_0_flat;
-            for (k = 0; k <= 10; k = k + 1) begin
-                reg_length_mode_bypass[k+1] <= reg_length_mode_bypass[k];
-                reg_valid_bypass[k+1] <= reg_valid_bypass[k];
-                reg_bypass[k+1] <= reg_bypass[k];
+        else if (i_en) begin
+            r_length_mode_byp[0] <= i_length_mode;
+            r_valid_byp      [0] <= i_valid;
+            r_in0_byp        [0] <= i_in0_flat;
+            for (integer k = 0; k <= 10; k = k + 1) begin
+                r_length_mode_byp[k+1] <= r_length_mode_byp[k];
+                r_valid_byp      [k+1] <= r_valid_byp      [k];
+                r_in0_byp        [k+1] <= r_in0_byp        [k];
             end
         end
     end
 
-    genvar i, j;
+    // Initial stage assignments
     generate
-        for (i = 0; i < 64; i = i + 1) begin
-            assign stage_data[0][i] = in_1_flat[i*16 +: 16];
+        for (genvar i = 0; i < 64; i = i + 1) begin : input_gen
+            assign stg_data[0][i] = i_in1_flat[i*16 +: 16];
         end
     endgenerate
-    
+
+    // Adder tree generation (6 stages, each stage is 2-cycles)
     generate
-        for (j = 0; j < 6; j = j + 1) begin : stages
-            for (i = 0; i < (64 >> (j+1)); i = i + 1) begin : adders
-                add_FX16 ADD (
-                    .A(stage_data[j][2*i]),
-                    .B(stage_data[j][2*i+1]),
-                    .CLK(clk),
-                    .CE(en),
-                    .S(stage_data[j+1][i])
+        for (genvar j = 0; j < 6; j = j + 1) begin : stages
+            for (genvar i = 0; i < (64 >> (j+1)); i = i + 1) begin : adders
+                add_unit ADDER (
+                    .i_clk(i_clk),
+                    .i_en (i_en),
+                    .i_rst(i_rst),
+                    .i_A  (stg_data[j][2*i]),
+                    .i_B  (stg_data[j][2*i+1]),
+                    .o_sum(stg_data[j+1][i])
                 );
             end
         end
     endgenerate
 
-    reg [15:0] in_1_sum_32_0_pipe [0:1];
-    reg [15:0] in_1_sum_32_1_pipe [0:1];
+    // Output pipelines for 32-mode and 16-mode
+    // 2-stage pipe for 32-mode sums
+    reg [15:0] sum32_0_pip [0:1];
+    reg [15:0] sum32_1_pip [0:1];
+    // 4-stage pipe for 16-mode sums
+    reg [15:0] sum16_0_pip [0:3];
+    reg [15:0] sum16_1_pip [0:3];
+    reg [15:0] sum16_2_pip [0:3];
+    reg [15:0] sum16_3_pip [0:3];
 
-    reg [15:0] in_1_sum_16_0_pipe [0:3];
-    reg [15:0] in_1_sum_16_1_pipe [0:3];
-    reg [15:0] in_1_sum_16_2_pipe [0:3];
-    reg [15:0] in_1_sum_16_3_pipe [0:3];
-
-    always @(posedge clk) begin
-        if (rst) begin
-            in_1_sum_32_0_pipe[0] <= 16'd0;
-            in_1_sum_32_1_pipe[0] <= 16'd0;
-
-            in_1_sum_32_0_pipe[1] <= 16'd0;
-            in_1_sum_32_1_pipe[1] <= 16'd0;
-
-            in_1_sum_16_0_pipe[0] <= 16'd0;
-            in_1_sum_16_1_pipe[0] <= 16'd0;
-            in_1_sum_16_2_pipe[0] <= 16'd0;
-            in_1_sum_16_3_pipe[0] <= 16'd0;
-
-            in_1_sum_16_0_pipe[1] <= 16'd0;
-            in_1_sum_16_1_pipe[1] <= 16'd0;
-            in_1_sum_16_2_pipe[1] <= 16'd0;
-            in_1_sum_16_3_pipe[1] <= 16'd0;
-
-            in_1_sum_16_0_pipe[2] <= 16'd0;
-            in_1_sum_16_1_pipe[2] <= 16'd0;
-            in_1_sum_16_2_pipe[2] <= 16'd0;
-            in_1_sum_16_3_pipe[2] <= 16'd0;
-
-            in_1_sum_16_0_pipe[3] <= 16'd0;
-            in_1_sum_16_1_pipe[3] <= 16'd0;
-            in_1_sum_16_2_pipe[3] <= 16'd0;
-            in_1_sum_16_3_pipe[3] <= 16'd0;
+    always @(posedge i_clk) begin
+        if (i_rst) begin
+            for (integer k = 0; k < 2; k = k + 1) begin
+                sum32_0_pip[k] <= 16'd0; sum32_1_pip[k] <= 16'd0;
+            end
+            for (integer k = 0; k < 4; k = k + 1) begin
+                sum16_0_pip[k] <= 16'd0; sum16_1_pip[k] <= 16'd0;
+                sum16_2_pip[k] <= 16'd0; sum16_3_pip[k] <= 16'd0;
+            end
         end
-        else if (en) begin
-            in_1_sum_32_0_pipe[0] <= stage_data[5][0];
-            in_1_sum_32_1_pipe[0] <= stage_data[5][1];
-
-            in_1_sum_32_0_pipe[1] <= in_1_sum_32_0_pipe[0];
-            in_1_sum_32_1_pipe[1] <= in_1_sum_32_1_pipe[0];
-
-            in_1_sum_16_0_pipe[0] <= stage_data[4][0];
-            in_1_sum_16_1_pipe[0] <= stage_data[4][1];
-            in_1_sum_16_2_pipe[0] <= stage_data[4][2];
-            in_1_sum_16_3_pipe[0] <= stage_data[4][3];
-
-            in_1_sum_16_0_pipe[1] <= in_1_sum_16_0_pipe[0];
-            in_1_sum_16_1_pipe[1] <= in_1_sum_16_1_pipe[0];
-            in_1_sum_16_2_pipe[1] <= in_1_sum_16_2_pipe[0];
-            in_1_sum_16_3_pipe[1] <= in_1_sum_16_3_pipe[0];
-
-            in_1_sum_16_0_pipe[2] <= in_1_sum_16_0_pipe[1];
-            in_1_sum_16_1_pipe[2] <= in_1_sum_16_1_pipe[1];
-            in_1_sum_16_2_pipe[2] <= in_1_sum_16_2_pipe[1];
-            in_1_sum_16_3_pipe[2] <= in_1_sum_16_3_pipe[1];
-
-            in_1_sum_16_0_pipe[3] <= in_1_sum_16_0_pipe[2];
-            in_1_sum_16_1_pipe[3] <= in_1_sum_16_1_pipe[2];
-            in_1_sum_16_2_pipe[3] <= in_1_sum_16_2_pipe[2];
-            in_1_sum_16_3_pipe[3] <= in_1_sum_16_3_pipe[2];
+        else if (i_en) begin
+            // 32-mode pipeline (2 stage)
+            sum32_0_pip[0] <= stg_data[5][0];
+            sum32_1_pip[0] <= stg_data[5][1];
+            sum32_0_pip[1] <= sum32_0_pip[0];
+            sum32_1_pip[1] <= sum32_1_pip[0];
+            // 16-mode pipeline (4 stages)
+            sum16_0_pip[0] <= stg_data[4][0];
+            sum16_1_pip[0] <= stg_data[4][1];
+            sum16_2_pip[0] <= stg_data[4][2];
+            sum16_3_pip[0] <= stg_data[4][3];
+            for (integer k = 0; k < 3; k = k + 1) begin
+                sum16_0_pip[k+1] <= sum16_0_pip[k];
+                sum16_1_pip[k+1] <= sum16_1_pip[k];
+                sum16_2_pip[k+1] <= sum16_2_pip[k];
+                sum16_3_pip[k+1] <= sum16_3_pip[k];
+            end
         end
     end
 
+    // Output assignments
+    // 64-mode output
+    assign o_sum64_0     = stg_data[6][0];
+    // 32-mode outputs
+    assign o_sum32_0     = sum32_0_pip[1];
+    assign o_sum32_1     = sum32_1_pip[1];
+    // 16-mode outputs
+    assign o_sum16_0     = sum16_0_pip[3];
+    assign o_sum16_1     = sum16_1_pip[3];
+    assign o_sum16_2     = sum16_2_pip[3];
+    assign o_sum16_3     = sum16_3_pip[3];
+    // Bypass outputs
+    assign o_length_mode_byp = r_length_mode_byp[11];
+    assign o_valid_byp       = r_valid_byp      [11];
+    assign o_in0_byp         = r_in0_byp        [11];
 
-    assign in_1_sum_64_0 = stage_data[6][0];
+endmodule
 
-    assign in_1_sum_32_0 = in_1_sum_32_0_pipe[1];
-    assign in_1_sum_32_1 = in_1_sum_32_1_pipe[1];
+module add_unit (
+    // Operation signals
+    input  wire        i_clk,
+    input  wire        i_en,
+    input  wire        i_rst,
 
-    assign in_1_sum_16_0 = in_1_sum_16_0_pipe[3];
-    assign in_1_sum_16_1 = in_1_sum_16_1_pipe[3];
-    assign in_1_sum_16_2 = in_1_sum_16_2_pipe[3];
-    assign in_1_sum_16_3 = in_1_sum_16_3_pipe[3];
+    // Inputs
+    input  wire [15:0] i_A,
+    input  wire [15:0] i_B,
 
-    assign length_mode_bypass = reg_length_mode_bypass[5];
-    assign valid_bypass_out = reg_valid_bypass[11];
-    assign in_bypass_flat = reg_bypass[11];
-
+    // Output
+    output wire [15:0] o_sum
+);
+    // Instantiate FXP Adder IP Core
+    // 2-clock cycle latency
+    add_FX16 IP_ADDER (
+        .A  (i_A),
+        .B  (i_B),
+        .CLK(i_clk),
+        .CE (i_en),
+        .S  (o_sum)
+    );
 endmodule

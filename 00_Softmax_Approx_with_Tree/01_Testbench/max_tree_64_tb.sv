@@ -5,6 +5,7 @@ module max_tree_64_tb;
     reg           i_clk;
     reg           i_en;
     reg           i_rst;
+
     reg    [1:0]  i_length_mode;
     reg    [63:0] i_valid;
     reg  [1023:0] i_in_flat;
@@ -52,7 +53,7 @@ module max_tree_64_tb;
     );
 
     // Utility Tasks
-    task push_data;
+    task put_data;
         input [1:0] mode;
         integer i;
         begin
@@ -68,6 +69,36 @@ module max_tree_64_tb;
             i_valid = 1'b0;
         end
     endtask
+
+    // Task to display fixed-point value as real number
+    task display_fixed;
+        input [15:0] val;
+        real real_val;
+        begin
+            real_val = $itor($signed(val)) / 1024.0;
+            $write("%f", real_val);
+        end
+    endtask
+
+    always @(posedge i_clk) begin
+        if (o_valid_max) begin
+            $write("64_out :\n"); 
+            display_fixed(o_max64_0); 
+            $write("\n");
+            
+            $write("32_out :\n"); 
+            display_fixed(o_max32_0); $write(" | ");
+            display_fixed(o_max32_1);
+            $write("\n");
+
+            $write("16_out :\n"); 
+            display_fixed(o_max16_0); $write(" | ");
+            display_fixed(o_max16_1); $write(" | ");
+            display_fixed(o_max16_2); $write(" | ");
+            display_fixed(o_max16_3);
+            $write("\n\n");
+        end
+    end
 
     // Main Stimulus
     integer k;
@@ -85,32 +116,32 @@ module max_tree_64_tb;
         i_en  = 1;
         #20;
 
-        // Test Case 1: Max at Index 0 (64-mode focus)
+        // Test Case 1:
         for (k=0; k<64; k=k+1) test_data[k] = k; 
         test_data[0] = 500;
-        push_data(2'd0); 
-        // Test Case 2: Max at Index 63 (64-mode focus)
+        put_data(2'd0);
+
+        // Test Case 2:
         for (k=0; k<64; k=k+1) test_data[k] = 10;
         test_data[63] = 999;
-        push_data(2'd0);
+        put_data(2'd0);
 
-        // Test Case 3: 32-mode
+        // Test Case 3:
         for (k=0; k<64; k=k+1) test_data[k] = k;
-        push_data(2'd1);
+        put_data(2'd1);
 
-        // Test Case 4: 16-mode
-        // Negative numbers
+        // Test Case 4:
         for (k=0; k<64; k=k+1) test_data[k] = -100 + k; 
-        push_data(2'd2);
-        // Test Case 5: 16-mode
-        // Positive numbers
-        for (k=0; k<64; k=k+1) test_data[k] = k; 
-        push_data(2'd2);
+        put_data(2'd2);
 
-        // Test Case 6: All Negative Numbers
+        // Test Case 5:
+        for (k=0; k<64; k=k+1) test_data[k] = k; 
+        put_data(2'd2);
+
+        // Test Case 6:
         for (k=0; k<64; k=k+1) test_data[k] = -500 - k;
         test_data[10] = -5;
-        push_data(2'd0);
+        put_data(2'd0);
 
         // Wait for pipeline to drain
         repeat(10) @(posedge i_clk);

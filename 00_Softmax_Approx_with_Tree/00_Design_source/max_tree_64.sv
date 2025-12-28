@@ -34,12 +34,12 @@ module max_tree_64 (
     wire [63:0] stg_valid [0:6];
     wire [15:0] stg_data  [0:6][0:63];
 
-    // Bypass registers
+    // Bypass registers (6 stages)
     reg    [1:0] r_length_mode_byp [0:5];
     reg   [63:0] r_valid_byp       [0:5];
     reg [1023:0] r_byp             [0:5];
 
-    // Bypass pipeline
+    // Bypass pipeline (6 stages)
     always @(posedge i_clk) begin
         if (i_rst) begin
             for (integer k = 0; k <= 5; k = k + 1) begin
@@ -99,38 +99,38 @@ module max_tree_64 (
     reg [15:0] max16_2_pip [0:1];
     reg [15:0] max16_3_pip [0:1];
 
-    // Pipeline registers
+// Pipeline registers
     always @(posedge i_clk) begin
         if (i_rst) begin
-            max32_0_pip    <= 16'd0;
-            max32_1_pip    <= 16'd0;
+            // 32-mode reset (1 stage)
+            max32_0_pip <= 16'd0;
+            max32_1_pip <= 16'd0;
 
-            max16_0_pip[0] <= 16'd0;
-            max16_1_pip[0] <= 16'd0;
-            max16_2_pip[0] <= 16'd0;
-            max16_3_pip[0] <= 16'd0;
-
-            max16_0_pip[1] <= 16'd0;
-            max16_1_pip[1] <= 16'd0;
-            max16_2_pip[1] <= 16'd0;
-            max16_3_pip[1] <= 16'd0;
+            // 16-mode reset (2 stages)
+            for (integer k = 0; k < 2; k = k + 1) begin
+                max16_0_pip[k] <= 16'd0;
+                max16_1_pip[k] <= 16'd0;
+                max16_2_pip[k] <= 16'd0;
+                max16_3_pip[k] <= 16'd0;
+            end
         end 
         else if (i_en) begin
-            max32_0_pip    <= stg_data[5][0];
-            max32_1_pip    <= stg_data[5][1];
-
+            // 32-mode pipeline (1 stage)
+            max32_0_pip <= stg_data[5][0];
+            max32_1_pip <= stg_data[5][1];
+            // 16-mode pipeline (2 stages)
             max16_0_pip[0] <= stg_data[4][0];
             max16_1_pip[0] <= stg_data[4][1];
             max16_2_pip[0] <= stg_data[4][2];
             max16_3_pip[0] <= stg_data[4][3];
-
-            max16_0_pip[1] <= max16_0_pip[0];
-            max16_1_pip[1] <= max16_1_pip[0];
-            max16_2_pip[1] <= max16_2_pip[0];
-            max16_3_pip[1] <= max16_3_pip[0];
+            for (integer k = 1; k < 2; k = k + 1) begin
+                max16_0_pip[k] <= max16_0_pip[k-1];
+                max16_1_pip[k] <= max16_1_pip[k-1];
+                max16_2_pip[k] <= max16_2_pip[k-1];
+                max16_3_pip[k] <= max16_3_pip[k-1];
+            end
         end
     end
-
     // Output assignments
     // Max valid output
     assign o_valid_max = stg_valid[6][0];
