@@ -13,12 +13,12 @@ module stage3_pow2_approx(
     output wire        o_valid,
     output wire [15:0] o_pow_x,
     // Bypass outputs
-    output wire [15:0] o_x_bypass
+    output wire [15:0] o_x_byp
 );
     // Pipeline stage registers
     // 2-stage pipeline
-    reg  [21:0] reg_stg0;
-    reg  [32:0] reg_stg1;
+    reg  [21:0] r_stg0;
+    reg  [32:0] r_stg1;
 
     // Internal signals
     wire  [9:0] x_frac;
@@ -27,20 +27,20 @@ module stage3_pow2_approx(
     wire [15:0] result;
 
     // Internal signal assignments
-    assign x_frac = reg_stg0[9:0];
+    assign x_frac = r_stg0[9:0];
     assign x_int  = i_x[15:10];
 
     // Sequential logic : pipeline registers
     always @(posedge i_clk) begin
         if (i_rst) begin
-            reg_stg0 <= 22'd0;
-            reg_stg1 <= 33'd0;
+            r_stg0 <= 22'd0;
+            r_stg1 <= 33'd0;
         end
         else if (i_en) begin
             // Stage 0: Shift calculation
-            reg_stg0 <= {i_valid, shift, i_x};
+            r_stg0 <= {i_valid, shift, i_x};
             // Stage 1: Pow2 approximation
-            reg_stg1 <= {reg_stg0[21], result, reg_stg0[15:0]};
+            r_stg1 <= {r_stg0[21], result, r_stg0[15:0]};
         end
     end
 
@@ -68,12 +68,12 @@ module stage3_pow2_approx(
     end
 
     // Calculation of pow2 approximation
-    assign result = {1'b1, x_frac, 5'b0_0000} >> reg_stg0[20:16];
+    assign result = {1'b1, x_frac, 5'b0_0000} >> r_stg0[20:16];
 
     // Output assignments
     // Valid signal and pow2 output
-    assign o_valid    = reg_stg1[32];
-    assign o_pow_x    = reg_stg1[31:16];
+    assign o_valid    = r_stg1[32];
+    assign o_pow_x    = r_stg1[31:16];
     // Bypass output
-    assign o_x_bypass = reg_stg1[15:0];
+    assign o_x_byp = r_stg1[15:0];
 endmodule

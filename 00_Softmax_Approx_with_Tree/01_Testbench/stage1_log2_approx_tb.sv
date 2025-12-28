@@ -75,15 +75,22 @@ module stage1_log2_approx_tb;
         i_valid = 0;
         i_in0   = 16'd0;
         i_in1   = 16'd0;
-        #5; 
-        i_rst   = 1; #10;
-        i_rst   = 0; #10;
+        #2.5; 
+        i_rst   = 1; #5;
+        i_rst   = 0; #17.5;
     end
 
     initial begin
         #22.5;
         i_en    = 1;
         $display("==== log2_approx test ====");
+        i_in0   = 16'b000000_0000000000;
+        i_in1   = 16'b000000_0001000000;
+        i_valid = 1'b1;
+        #5; 
+        i_valid = 1'b0;
+        #5;
+
         i_in0   = 16'b000000_0000000001;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
@@ -97,7 +104,8 @@ module stage1_log2_approx_tb;
         #5; 
         i_valid = 1'b0;
         #5;
-
+        display_output(o_in0_byp, o_in1_byp, o_log2_in0);
+        
         i_in0   = 16'b000000_0000000100;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;

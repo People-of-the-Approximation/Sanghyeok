@@ -1,98 +1,111 @@
 module RU (
-    input           clk,
-    input           en,
-    input           rst_n,
+    // Operation signals
+    input  wire        i_clk,
+    input  wire        i_en,
+    // Reset signal (active high)
+    input  wire        i_rst,
 
-    input           sel_mult,
-    input           sel_mux,
+    // Control signals
+    input  wire        i_sel_mult,
+    input  wire        i_sel_mux,
 
-    input           valid_in,
-    input  [15:0]   in_0,
-    input  [15:0]   in_1,
+    // Data input signals
+    input  wire        i_valid,
+    input  wire [15:0] i_in0,
+    input  wire [15:0] i_in1,
 
-    output          valid_out,
-    output [15:0]   out_0,
-    output [15:0]   out_1
+    // Data output signals
+    output wire        o_valid,
+    output wire [15:0] o_out0,
+    output wire [15:0] o_out1
 );
-    wire [15:0] log_in_0;
-    wire [15:0] in_0_bypass;
-    wire [15:0] in_1_bypass;
+    // Stage1 log2 approximation signals
+    wire [15:0] w_log_in0;
+    wire [15:0] w_in0_byp;
+    wire [15:0] w_in1_byp;
 
-    wire [15:0] sub;
-    wire [15:0] mult;
+    // Subtraction and multiplication inputs
+    wire [15:0] w_sub_in;
+    wire [15:0] w_mult_in;
 
-    wire [15:0] diff;
-    wire [31:0] mult_result;
-    wire [15:0] out_x;
+    // Subtraction and multiplication outputs
+    wire [15:0] w_sub_result;
+    wire [31:0] w_mult_result;
 
-    wire valid_log;
-    reg [5:0] valid_pipe;
+    // Pipeline valid signal for stage3
+    wire w_valid_log;
+    reg [5:0] valid_pip;
 
-    always @(posedge clk) begin
-        if (rst) begin
-            valid_pipe[0] <= 1'b0;
-            valid_pipe[1] <= 1'b0;
-            valid_pipe[2] <= 1'b0;
-            valid_pipe[3] <= 1'b0;
-            valid_pipe[4] <= 1'b0;
-            valid_pipe[5] <= 1'b0;
+    // Pipeline valid signal
+    always @(posedge i_clk) begin
+        if (i_rst) begin
+            valid_pip <= 6'd0;
         end
-        else if (en) begin
-            valid_pipe[0] <= valid_log;
-            valid_pipe[1] <= valid_pipe[0];
-            valid_pipe[2] <= valid_pipe[1];
-            valid_pipe[3] <= valid_pipe[2];
-            valid_pipe[4] <= valid_pipe[3];
-            valid_pipe[5] <= valid_pipe[4];
+        else if (i_en) begin
+            valid_pip[0] <= w_valid_log;
+            for (integer i=1; i<6; i=i+1) begin
+                valid_pip[i] <= valid_pip[i-1];
+            end
         end
     end
 
-    assign mult = (sel_mult) ? 16'b0000_0101_1100_0100 : 16'b0000_0100_0000_0000;
-    assign sub = (sel_mux) ? in_0_bypass : log_in_0;
+    // Mux for mode selection
+    assign w_mult_in = i_sel_mult ? 16'h05C4  : 16'h0400;
+    assign w_sub_in  = i_sel_mux  ? w_in0_byp : w_log_in0;
 
+    // Substraction : S = A - B
+    // in1_byp - sub_in
+    // 2 clock cycles latency
     sub_FX16 SUB(
-        .A(in_1_bypass),
-        .B(sub),
-        .CLK(clk),
-        .CE(en),
-        .S(diff)
+        .A  (w_in1_byp),
+        .B  (w_sub_in),
+        .CLK(i_clk),
+        .CE (i_en),
+        .S  (w_sub_result)
     );
 
+    // Multiplication : P = A * B
+    // sub_result * mult_in
+    // 4 clock cycles latency
     mult_FX16 MULT(
-        .CLK(clk),
-        .A(diff),
-        .B(mult),
-        .CE(en),
-        .P(mult_result)
+        .CLK(i_clk),
+        .A  (w_sub_result),
+        .B  (w_mult_in),
+        .CE (i_en),
+        .P  (w_mult_result)
     );
 
+    // Stage1 log2
+    // 3-stage pipeline
     stage1_log2_approx STAGE1 (
-        .clk(clk),
-        .en(en),
-        .rst(rst),
+        .i_clk     (i_clk),
+        .i_en      (i_en),
+        .i_rst     (i_rst),
 
-        .valid_in(valid_in),
-        .in_0(in_0),
-        .in_1(in_1),
+        .i_valid   (i_valid),
+        .i_in0     (i_in0),
+        .i_in1     (i_in1),
 
-        .valid_out(valid_log),
-        .log_in_0(log_in_0),
+        .o_valid   (w_valid_log),
+        .o_log2_in0(w_log_in0),
 
-        .in_0_bypass(in_0_bypass),
-        .in_1_bypass(in_1_bypass)
+        .o_in0_byp (w_in0_byp),
+        .o_in1_byp (w_in1_byp)
     );
 
+    // Stage3 pow2
+    // 2-stage pipeline
     stage3_pow2_approx STAGE2 (
-        .clk(clk),
-        .en(en),
-        .rst(rst),
+        .i_clk     (i_clk),
+        .i_en      (i_en),
+        .i_rst     (i_rst),
 
-        .valid_in(valid_pipe[5]),
-        .in_x(mult_result[25:10]),
+        .i_valid   (valid_pip[5]),
+        .i_x       (w_mult_result[25:10]),
 
-        .valid_out(valid_out),
-        .pow_in_x(out_1),
-        .in_x_bypass(out_0)
+        .o_valid   (o_valid),
+        .o_pow_x   (o_out1),
+        .o_x_byp   (o_out0)
     );
 
 endmodule

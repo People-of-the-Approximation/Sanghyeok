@@ -15,7 +15,7 @@ module stage3_pow2_approx_tb;
     wire        o_valid;
     wire [15:0] o_pow_x;
     // Bypass outputs
-    wire [15:0] o_x_bypass;
+    wire [15:0] o_x_byp;
 
     // Clock generation
     initial i_clk = 0;
@@ -31,9 +31,10 @@ module stage3_pow2_approx_tb;
 
         .o_valid(o_valid),
         .o_pow_x(o_pow_x),
-        .o_x_bypass(o_x_bypass)
+        .o_x_byp(o_x_byp)
     );
 
+    // Task to display fixed-point value as real number
     task display_fixed;
         input [15:0] val;
         real real_val;
@@ -44,12 +45,12 @@ module stage3_pow2_approx_tb;
     endtask
 
     task display_output;
-        input [15:0] o_x_bypass;
+        input [15:0] o_x_byp;
         input [15:0] o_pow_x;
 
         begin
             $write("Input: \n");
-            display_fixed(o_x_bypass);
+            display_fixed(o_x_byp);
             $write("\n");
             $write("Output: \n");
             display_fixed(o_pow_x);
@@ -84,160 +85,160 @@ module stage3_pow2_approx_tb;
         i_x     = 16'b100110_0000000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b101000_0000000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b111100_1000000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b111101_0000000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b111101_1000000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b111110_0000000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b111110_0100000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b111110_1000000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b111110_1100000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b111111_0000000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b111111_0100000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b111111_1000000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b111111_1100000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b000000_0000000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b000000_0100000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b000000_1000000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b000000_1100000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b000001_0000000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b000001_0100000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b000001_1000000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b000001_1100000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b000010_0000000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b000010_0010000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b000010_0100000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b000010_0110000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b000010_1000000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b000010_1010000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b000010_1100000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b000011_1100000000;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b000100_1100101110;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
 
         i_x     = 16'b000100_1111111111;
         i_valid = 1'b1; #5; 
         i_valid = 1'b0; #5;
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
         #10;
 
-        display_output(o_x_bypass, o_pow_x);
+        display_output(o_x_byp, o_pow_x);
         #10;
 
         $finish;
