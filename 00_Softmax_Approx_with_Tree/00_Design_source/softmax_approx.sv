@@ -1,252 +1,222 @@
-module softmax_approx(
-    input clk,
-    input en,
-    input rst,
+module softmax_approx (
+    // Operation signals
+    input  wire           i_clk,
+    input  wire           i_en,
+    input  wire           i_rst,
 
-    input [1:0] length_mode,
+    // Length mode input
+    input  wire    [1:0]  i_length_mode,
 
-    input valid_in,
-    input [1023:0] in_x_flat,
+    // Data input signals
+    input  wire           i_valid,
+    input  wire [1023:0]  i_in_x_flat,
 
-    output valid_out,
-    output [1023:0] prob_flat
+    // Data output signals
+    output wire           o_valid,
+    output wire [1023:0]  o_prob_flat
 );
-    wire valid_max_out;
-    wire [15:0] max_x;
-    wire [63:0] valid_bypass_out;
-    wire [1023:0] max_bypass;
+    // Internal signals for Max Tree
+    wire          w_valid_max_out;
+    wire [1023:0] w_max_bypass;
+    wire [15:0]   w_in_x [0:63];
 
-    wire [15:0] in_x [0:63];
+    // Internal signals for First RU Stage (x_i - max)
+    wire [15:0]   w_y [0:63];
+    wire [1023:0] w_y_flat;
+    wire [15:0]   w_add_in [0:63];
+    wire [1023:0] w_add_in_flat;
 
-    wire [15:0] prob [0:63];
-    wire [15:0] add_in [0:63];
+    // Internal signals for Adder Tree
+    wire [1023:0] w_add_byp_flat;
+    wire [15:0]   w_add_byp [0:63];
+    wire          w_valid_s1;
+    wire          w_valid_s2;
 
-    wire [15:0] y [0:63];
-    wire [1023:0] y_flat;
+    // Internal signals for Second RU Stage (log2_sum - y_i)
+    wire [15:0]   w_prob [0:63];
+    wire [63:0]   w_valid_s1_arr;
+    wire [63:0]   w_valid_s2_arr;
 
-    wire [1023:0] add_in_flat;
-    wire [15:0] add_out;
+    // Global valid signal assignments
+    assign w_valid_s1 = &(w_valid_s1_arr);
+    assign o_valid    = &(w_valid_s2_arr);
 
-    wire [1023:0] add_bypass_flat;
-    wire [15:0] add_bypass [0:63];
-
-    wire [63:0] valid_s1_arr;
-    wire [63:0] valid_s2_arr;
-
-    wire valid_s1;
-    wire valid_s2;
-
-    assign valid_s1 = &(valid_s1_arr);
-    assign valid_out = &(valid_s2_arr);
-
+    // Data flattening and unflattening
     genvar i;
     generate
-        for (i = 0; i < 64; i = i + 1) begin
-            assign in_x[i] = max_bypass[i*16 +: 16];
-            assign add_in_flat[i*16 +: 16] = add_in[i];
-            assign y_flat[i*16 +: 16] = y[i];
-            assign add_bypass[i] = add_bypass_flat[i*16 +: 16];
-            assign prob_flat[i*16 +: 16] = prob[i];
+        for (i = 0; i < 64; i = i + 1) begin : data_mapping
+            assign w_in_x       [i]          = w_max_bypass  [i*16 +: 16];
+            assign w_add_in_flat[i*16 +: 16] = w_add_in      [i];
+            assign w_y_flat     [i*16 +: 16] = w_y           [i];
+            assign w_add_byp    [i]          = w_add_byp_flat[i*16 +: 16];
+            assign o_prob_flat  [i*16 +: 16] = w_prob        [i];
         end
     endgenerate
 
-    wire [15:0] MAX_64;
-    wire [15:0] MAX_32 [0:1];
-    wire [15:0] MAX_16 [0:3];
+    // Max tree signals
+    wire [15:0] w_max64;
+    wire [15:0] w_max32 [0:1];
+    wire [15:0] w_max16 [0:3];
+    wire [1:0]  w_mode_stg1;
+    reg  [15:0] r_max_stg1 [0:63];
 
-    wire [1:0] length_mode_stg_1;
-    reg [15:0] max_stg_1 [0:63];
+    // Pipeline for mode selection (matches RU stage 1 latency)
+    reg  [1:0]  r_mode_byp_11 [0:10];
 
-    reg [1:0] length_mode_bypass_11 [0:10];
+    // Adder tree signals
+    wire [15:0] w_sum64;
+    wire [15:0] w_sum32 [0:1];
+    wire [15:0] w_sum16 [0:3];
+    wire [1:0]  w_mode_stg3;
+    reg  [15:0] r_sum_stg3 [0:63];
 
-    wire [15:0] ADD_64;
-    wire [15:0] ADD_32 [0:1];
-    wire [15:0] ADD_16 [0:3];
-
-    wire [1:0] length_mode_stg_3;
-    reg [15:0] add_stg_3 [0:63];
-
-    integer k;
-    always @(posedge clk) begin
-        if (rst) begin
-            for (k = 0; k <= 10; k = k + 1) begin
-                length_mode_bypass_11[k] <= 2'd0;
+    // Mode bypass pipeline logic
+    always @(posedge i_clk) begin
+        if (i_rst) begin
+            for (integer k = 0; k <= 10; k = k + 1) begin
+                r_mode_byp_11[k] <= 2'd0;
             end
         end
-        else if (en) begin
-            length_mode_bypass_11[0] <= length_mode_stg_1;
-            for (k = 0; k <= 9; k = k + 1) begin
-                length_mode_bypass_11[k+1] <= length_mode_bypass_11[k];
+        else if (i_en) begin
+            r_mode_byp_11[0] <= w_mode_stg1;
+            for (integer k = 0; k <= 9; k = k + 1) begin
+                r_mode_byp_11[k+1] <= r_mode_byp_11[k];
             end
         end
     end
 
-    max_tree_64 max_tree(
-        .clk(clk),
-        .en(en),
-        .rst(rst),
+    // Max tree instantiation (6-stage pipeline)
+    max_tree_64 MAXTREE (
+        .i_clk(i_clk),
+        .i_en (i_en),
+        .i_rst(i_rst),
 
-        .length_mode(length_mode),
+        .i_length_mode(i_length_mode),
+        .i_valid      ({64{i_valid}}),
+        .i_in_flat    (i_in_x_flat),
 
-        .valid_in({64{valid_in}}),
-        .in_flat(in_x_flat),
+        .o_valid_max(w_valid_max_out),
+        .o_max64_0  (w_max64),
+        .o_max32_0  (w_max32[0]),
+        .o_max32_1  (w_max32[1]),
+        .o_max16_0  (w_max16[0]),
+        .o_max16_1  (w_max16[1]),
+        .o_max16_2  (w_max16[2]),
+        .o_max16_3  (w_max16[3]),
 
-        .valid_MAX_out(valid_max_out),
-
-        .MAX_64_0(MAX_64),
-
-        .MAX_32_0(MAX_32[0]),
-        .MAX_32_1(MAX_32[1]),
-
-        .MAX_16_0(MAX_16[0]),
-        .MAX_16_1(MAX_16[1]),
-        .MAX_16_2(MAX_16[2]),
-        .MAX_16_3(MAX_16[3]),
-
-        .length_mode_bypass(length_mode_stg_1),
-
-        .valid_bypass_out(valid_bypass_out),
-        .in_bypass(max_bypass)
+        .o_length_mode_byp(w_mode_stg1),
+        .o_valid_byp      (),
+        .o_in_byp         (w_max_bypass)
     );
 
+    // Combinational logic : broadcast max value based on mode
     always @(*) begin
-        case (length_mode_stg_1)
-            2'd0: begin
-                for (k = 0; k < 16; k = k + 1) begin
-                    max_stg_1[k] = MAX_16[0];
-                end
-                for (k = 16; k < 32; k = k + 1) begin
-                    max_stg_1[k] = MAX_16[1];
-                end
-                for (k = 32; k < 48; k = k + 1) begin
-                    max_stg_1[k] = MAX_16[2];
-                end
-                for (k = 48; k < 64; k = k + 1) begin
-                    max_stg_1[k] = MAX_16[3];
-                end
+        case (w_mode_stg1)
+            2'd0: begin // 16-mode
+                for (integer k = 0; k < 16; k = k + 1)  r_max_stg1[k] = w_max16[0];
+                for (integer k = 16; k < 32; k = k + 1) r_max_stg1[k] = w_max16[1];
+                for (integer k = 32; k < 48; k = k + 1) r_max_stg1[k] = w_max16[2];
+                for (integer k = 48; k < 64; k = k + 1) r_max_stg1[k] = w_max16[3];
             end
-            2'd1: begin
-                for (k = 0; k < 32; k = k + 1) begin
-                    max_stg_1[k] = MAX_32[0];
-                end
-                for (k = 32; k < 64; k = k + 1) begin
-                    max_stg_1[k] = MAX_32[1];
-                end
+            2'd1: begin // 32-mode
+                for (integer k = 0; k < 32; k = k + 1)  r_max_stg1[k] = w_max32[0];
+                for (integer k = 32; k < 64; k = k + 1) r_max_stg1[k] = w_max32[1];
             end
-            2'd2: begin
-                for (k = 0; k < 64; k = k + 1) begin
-                    max_stg_1[k] = MAX_64;
-                end
+            2'd2: begin // 64-mode
+                for (integer k = 0; k < 64; k = k + 1)  r_max_stg1[k] = w_max64;
             end
             default: begin
-                for (k = 0; k < 64; k = k + 1) begin
-                    max_stg_1[k] = MAX_64;
-                end
+                for (integer k = 0; k < 64; k = k + 1)  r_max_stg1[k] = w_max64;
             end
         endcase
     end
 
+    // Stage 1: (x_i - max) * log2(e) and 2^(result)
     generate
-        for (i = 0; i < 64; i = i + 1) begin
-            RU FIRSTSTAGE(
-                .clk(clk),
-                .en(en),
-                .rst(rst),
+        for (i = 0; i < 64; i = i + 1) begin : stage1_ru
+            RU FIRSTSTAGE (
+                .i_clk(i_clk),
+                .i_en(i_en),
+                .i_rst(i_rst),
 
-                .valid_in(valid_max_out & valid_bypass_out[i]),
-                .in_0(max_stg_1[i]),
-                .in_1(in_x[i]),
+                .i_valid(w_valid_max_out),
+                .i_in0  (r_max_stg1[i]),
+                .i_in1  (w_in_x[i]),
 
-                .sel_mult(1'b1),
-                .sel_mux(1'b1),
+                .i_sel_mult(1'b1),
+                .i_sel_mux (1'b1),
 
-                .valid_out(valid_s1_arr[i]),
-                .out_0(y[i]),
-                .out_1(add_in[i])
+                .o_valid(w_valid_s1_arr[i]),
+                .o_out0 (w_y[i]),
+                .o_out1 (w_add_in[i])
             );
         end
     endgenerate
 
-    add_tree_64 ADDT(
-        .clk(clk),
-        .en(en),
-        .rst(rst),
+    // Adder tree instantiation (12-stage pipeline)
+    add_tree_64 ADDTREE (
+        .i_clk(i_clk),
+        .i_en (i_en),
+        .i_rst(i_rst),
 
-        .length_mode(length_mode_bypass_11[10]),
+        .i_length_mode(r_mode_byp_11[10]),
+        .i_valid      (w_valid_s1),
+        .i_in0_flat   (w_y_flat),
+        .i_in1_flat   (w_add_in_flat),
 
-        .valid_in(valid_s1),
-        .in_0_flat(y_flat),
-        .in_1_flat(add_in_flat),
+        .o_sum64_0(w_sum64),
+        .o_sum32_0(w_sum32[0]),
+        .o_sum32_1(w_sum32[1]),
+        .o_sum16_0(w_sum16[0]),
+        .o_sum16_1(w_sum16[1]),
+        .o_sum16_2(w_sum16[2]),
+        .o_sum16_3(w_sum16[3]),
 
-        .in_1_sum_64_0(ADD_64),
-
-        .in_1_sum_32_0(ADD_32[0]),
-        .in_1_sum_32_1(ADD_32[1]),
-
-        .in_1_sum_16_0(ADD_16[0]),
-        .in_1_sum_16_1(ADD_16[1]),
-        .in_1_sum_16_2(ADD_16[2]),
-        .in_1_sum_16_3(ADD_16[3]),
-
-        .length_mode_bypass(length_mode_stg_3),
-        .valid_bypass_out(valid_s2),
-        .in_bypass_flat(add_bypass_flat)
+        .o_length_mode_byp(w_mode_stg3),
+        .o_valid_byp      (w_valid_s2),
+        .o_in0_byp        (w_add_byp_flat)
     );
 
+    // Combinational logic : broadcast sum value based on mode
     always @(*) begin
-        case (length_mode_stg_3)
-            2'd0: begin
-                for (k = 0; k < 16; k = k + 1) begin
-                    add_stg_3[k] = ADD_16[0];
-                end
-                for (k = 16; k < 32; k = k + 1) begin
-                    add_stg_3[k] = ADD_16[1];
-                end
-                for (k = 32; k < 48; k = k + 1) begin
-                    add_stg_3[k] = ADD_16[2];
-                end
-                for (k = 48; k < 64; k = k + 1) begin
-                    add_stg_3[k] = ADD_16[3];
-                end
+        case (w_mode_stg3)
+            2'd0: begin // 16-mode
+                for (integer k = 0; k < 16; k = k + 1)  r_sum_stg3[k] = w_sum16[0];
+                for (integer k = 16; k < 32; k = k + 1) r_sum_stg3[k] = w_sum16[1];
+                for (integer k = 32; k < 48; k = k + 1) r_sum_stg3[k] = w_sum16[2];
+                for (integer k = 48; k < 64; k = k + 1) r_sum_stg3[k] = w_sum16[3];
             end
-            2'd1: begin
-                for (k = 0; k < 32; k = k + 1) begin
-                    add_stg_3[k] = ADD_32[0];
-                end
-                for (k = 32; k < 64; k = k + 1) begin
-                    add_stg_3[k] = ADD_32[1];
-                end
+            2'd1: begin // 32-mode
+                for (integer k = 0; k < 32; k = k + 1)  r_sum_stg3[k] = w_sum32[0];
+                for (integer k = 32; k < 64; k = k + 1) r_sum_stg3[k] = w_sum32[1];
             end
-            2'd2: begin
-                for (k = 0; k < 64; k = k + 1) begin
-                    add_stg_3[k] = ADD_64;
-                end
+            2'd2: begin // 64-mode
+                for (integer k = 0; k < 64; k = k + 1)  r_sum_stg3[k] = w_sum64;
             end
             default: begin
-                for (k = 0; k < 64; k = k + 1) begin
-                    add_stg_3[k] = ADD_64;
-                end
+                for (integer k = 0; k < 64; k = k + 1)  r_sum_stg3[k] = w_sum64;
             end
         endcase
     end
 
+    // Stage 2: (log2_sum - y_i) and final division via pow2
     generate
-        for (i = 0; i < 64; i = i + 1) begin
-            RU SECONDSTAGE(
-                .clk(clk),
-                .en(en),
-                .rst(rst),
+        for (i = 0; i < 64; i = i + 1) begin : stage3_ru
+            RU THIRDSTAGE (
+                .i_clk(i_clk),
+                .i_en (i_en),
+                .i_rst(i_rst),
 
-                .valid_in(valid_s2),
-                .in_0(add_stg_3[i]),
-                .in_1(add_bypass[i]),
+                .i_valid(w_valid_s2),
+                .i_in0  (r_sum_stg3[i]),
+                .i_in1  (w_add_byp[i]),
 
-                .sel_mult(1'b0),
-                .sel_mux(1'b0),
+                .i_sel_mult(1'b0),
+                .i_sel_mux (1'b0),
 
-                .valid_out(valid_s2_arr[i]),
-                .out_0(),
-                .out_1(prob[i])
+                .o_valid(w_valid_s2_arr[i]),
+                .o_out0 (),
+                .o_out1 (w_prob[i])
             );
         end
     endgenerate
