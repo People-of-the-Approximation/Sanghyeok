@@ -20,19 +20,17 @@ module stage1_log2_approx(
 );
     // Pipeline stage registers
     // 3-stage pipeline
-    reg [32:0] reg_stg0;
-    reg [36:0] reg_stg1;
-    reg [48:0] reg_stg2;
+    reg   [32:0] reg_stg0;
+    reg   [36:0] reg_stg1;
+    reg   [48:0] reg_stg2;
 
     // Internal signals
-    reg [3:0] zero_cnt;
-    reg [5:0] int_part;
-
-    // Wires for intermediate signals
+    reg   [3:0] zero_cnt;
+    reg   [5:0] int_part;
     wire [15:0] frac_part;
     wire [15:0] result;
 
-    // Sequential logic for pipeline registers
+    // Sequential logic : pipeline registers
     always @(posedge i_clk) begin
         if (i_rst) begin
             reg_stg0 <= 33'd0;
@@ -71,7 +69,7 @@ module stage1_log2_approx(
         endcase
     end
 
-    // Combinational logic for integer part of log2
+    // Combinational logic : integer part of log2
     always @(*) begin
         case (reg_stg1[35:32])
             4'b0001: int_part = 6'b00_0100;

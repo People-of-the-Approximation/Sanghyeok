@@ -22,25 +22,28 @@ module stage3_pow2_approx(
     // Internal signals
     wire  [9:0] x_frac;
     wire  [5:0] x_int;
-
-
     reg   [4:0] shift;
     wire [15:0] result;
 
+    // Internal signal assignments
     assign x_frac = reg_stg0[9:0];
     assign x_int  = i_x[15:10];
-    
+
+    // Sequential logic : pipeline registers
     always @(posedge i_clk) begin
         if (i_rst) begin
             reg_stg0 <= 22'd0;
             reg_stg1 <= 33'd0;
         end
         else if (i_en) begin
+            // Stage 0: Shift calculation
             reg_stg0 <= {i_valid, shift, i_x};
+            // Stage 1: Pow2 approximation
             reg_stg1 <= {reg_stg0[21], result, reg_stg0[15:0]};
         end
     end
 
+    // Combinational logic : shift amount determination
     always @(*) begin
         case (x_int)
             6'b110110: shift = 5'd15;
@@ -63,10 +66,13 @@ module stage3_pow2_approx(
         endcase
     end
 
+    // Calculation of pow2 approximation
     assign result = {1'b1, x_frac, 5'b0_0000} >> reg_stg0[20:16];
 
+    // Output assignments
+    // Valid signal and pow2 output
     assign o_valid    = reg_stg1[32];
     assign o_pow_x    = reg_stg1[31:16];
+    // Bypass output
     assign o_x_bypass = reg_stg1[15:0];
-
 endmodule
