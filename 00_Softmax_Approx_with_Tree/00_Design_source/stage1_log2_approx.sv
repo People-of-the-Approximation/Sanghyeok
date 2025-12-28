@@ -102,6 +102,6 @@ module stage1_log2_approx(
     assign o_valid    = reg_stg2[48];
     assign o_log2_in0 = reg_stg2[47:32];
     // Bypass outputs
-    assign o_in0_byp  = reg_stg2[31:16];
-    assign o_in1_byp  = reg_stg2[15:0];
+    assign o_in0_byp  = reg_stg2[15:0];
+    assign o_in1_byp  = reg_stg2[31:16];
 endmodule

@@ -12,6 +12,7 @@ module stage3_pow2_approx(
     // Data output signals
     output wire        o_valid,
     output wire [15:0] o_pow_x,
+    // Bypass outputs
     output wire [15:0] o_x_bypass
 );
     // Pipeline stage registers
