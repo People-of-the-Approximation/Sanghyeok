@@ -99,7 +99,7 @@ module max_tree_64 (
     reg [15:0] max16_2_pip [0:1];
     reg [15:0] max16_3_pip [0:1];
 
-// Pipeline registers
+    // Pipeline registers
     always @(posedge i_clk) begin
         if (i_rst) begin
             // 32-mode reset (1 stage)
