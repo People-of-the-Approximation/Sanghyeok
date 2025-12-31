@@ -152,16 +152,19 @@ module forwarding_test (
     input  wire           i_en,
     input  wire           i_rst,
 
+    input  wire           i_valid_max,   // 현재 입력되는 Local Max가 유효한지
     input  wire    [15:0] i_loc_max,     // 현재 입력되는 Local Max
     input  wire    [3:0]  i_length_mode, // 현재 그룹의 길이 모드
     input  wire    [15:0] i_temp,        // 동기화할 데이터 (Payload)
 
+    output wire           o_valid_max,       // 12클럭 뒤 유효 신호
     output wire    [15:0] o_global_max,      // 12클럭 뒤 정렬된 Global Max
     output wire    [3:0]  o_length_mode_byp, // 12클럭 뒤 모드
     output wire    [15:0] o_temp             // 12클럭 뒤 데이터
 );
 
     // --- 1. 파이프라인 레지스터 선언 ---
+    reg [11:0] r_valid_pip;         // 유효 신호 파이프라인
     reg [15:0] r_temp_pip   [0:11]; // 데이터 파이프라인
     reg [15:0] r_max_shift  [0:11]; // Max값 파이프라인 (Forwarding 대상)
     reg [3:0]  r_length_byp [0:11]; // 모드 파이프라인
@@ -179,79 +182,77 @@ module forwarding_test (
     acc_max u_acc_max (
         .i_clk       (i_clk),
         .i_en        (i_en),
+
         .i_rst       (i_rst),
         .i_rst_loc   (r_acc_rst_loc), // 그룹 종료 시 리셋 트리거
-        .i_valid_max (1'b1),          // forwarding_test는 항상 valid하다고 가정 (Testbench 제어)
+
+        .i_valid_max (r_valid_pip),          // forwarding_test는 항상 valid하다고 가정 (Testbench 제어)
         .i_loc_max   (i_loc_max),
+
         .o_max_front (w_max_front),   // Combinational Output (Current Max)
         .o_max_acc   (w_max_acc)      // Registered Output
     );
 
-    // --- 4. 마스크 로직 (Combinational) ---
-    // i_length_mode에 따라 파이프라인의 어디까지 덮어쓸지 결정
     always @(*) begin
         case (i_length_mode)
-            4'd3:    r_load_mask = 12'b0000_0000_0011; // 2개 (index 0, 1)
-            4'd4:    r_load_mask = 12'b0000_0000_0111; // 3개 (index 0, 1, 2)
-            4'd5:    r_load_mask = 12'b0000_0000_1111; // 4개
-            4'd6:    r_load_mask = 12'b0000_0001_1111; // 5개
-            4'd7:    r_load_mask = 12'b0000_0011_1111; // 6개
-            4'd8:    r_load_mask = 12'b0000_0111_1111; // 7개
-            4'd9:    r_load_mask = 12'b0000_1111_1111; // 8개
-            4'd10:   r_load_mask = 12'b0001_1111_1111; // 9개
-            4'd11:   r_load_mask = 12'b0011_1111_1111; // 10개
-            4'd12:   r_load_mask = 12'b0111_1111_1111; // 11개
-            4'd13:   r_load_mask = 12'b1111_1111_1111; // 12개 (전체)
-            default: r_load_mask = 12'b0000_0000_0001; // 기본 1개
+            4'd3:    r_load_mask = 12'b0000_0000_0011;
+            4'd4:    r_load_mask = 12'b0000_0000_0111;
+            4'd5:    r_load_mask = 12'b0000_0000_1111;
+            4'd6:    r_load_mask = 12'b0000_0001_1111;
+            4'd7:    r_load_mask = 12'b0000_0011_1111;
+            4'd8:    r_load_mask = 12'b0000_0111_1111;
+            4'd9:    r_load_mask = 12'b0000_1111_1111;
+            4'd10:   r_load_mask = 12'b0001_1111_1111;
+            4'd11:   r_load_mask = 12'b0011_1111_1111;
+            4'd12:   r_load_mask = 12'b0111_1111_1111;
+            4'd13:   r_load_mask = 12'b1111_1111_1111;
+            default: r_load_mask = 12'b0000_0000_0001;
         endcase
     end
 
-    // --- 5. 메인 시퀀셜 로직 ---
     always @(posedge i_clk) begin
         if (i_rst) begin
             r_cnt         <= 4'd0;
             r_acc_rst_loc <= 1'b0;
             for (integer k=0; k<12; k=k+1) begin
-                r_temp_pip[k]   <= 16'd0;
-                r_max_shift[k]  <= 16'h8000;
+                r_valid_pip [k] <= 1'b0;
+                r_temp_pip  [k] <= 16'd0;
+                r_max_shift [k] <= 16'h8000;
                 r_length_byp[k] <= 4'd0;
             end
         end 
         else if (i_en) begin
-            // 5-1. 기본 파이프라인 쉬프트
-            r_temp_pip[0]   <= i_temp;
+            r_valid_pip [0] <= i_valid_max;
+            r_temp_pip  [0] <= i_temp;
             r_length_byp[0] <= i_length_mode;
-            r_max_shift[0]  <= i_loc_max; // 일단 현재 값 넣음 (나중에 덮어씌워질 수 있음)
-
-            for (integer k=1; k<12; k=k+1) begin
-                r_temp_pip[k]   <= r_temp_pip[k-1];
-                r_length_byp[k] <= r_length_byp[k-1];
-                r_max_shift[k]  <= r_max_shift[k-1];
+            if ((r_cnt == i_length_mode - 4'd2) && r_load_mask[0]) begin
+                r_max_shift[0] <= w_max_front;
+                r_cnt          <= 4'd0;
+                r_acc_rst_loc  <= 1'b1;
             end
-
-            // 5-2. 카운터 및 Forwarding 제어
-            // Mode 3 (2 items) -> Count 0, 1 (Reset at 1)
-            if (r_cnt == i_length_mode - 4'd2) begin
-                // [그룹 종료 시점!]
-                // 마스크에 해당하는 모든 파이프라인 레지스터를 '최종 Max(w_max_front)'로 덮어씀
-                for (integer k=0; k<12; k=k+1) begin
-                    if (r_load_mask[k]) begin
-                        r_max_shift[k] <= w_max_front;
-                    end
-                end
-                
-                // 다음 그룹을 위해 카운터 초기화 및 acc_max 리셋 신호 생성
-                r_cnt         <= 4'd0;
-                r_acc_rst_loc <= 1'b1; // 다음 클럭에 acc_max 리셋됨
-            end 
+            if ((r_cnt == i_length_mode - 4'd2) && r_load_mask[0]) begin
+                r_max_shift[0] <= w_max_front;
+                r_cnt          <= 4'd0;
+                r_acc_rst_loc  <= 1'b1;
+            end
             else begin
-                r_cnt         <= r_cnt + 4'd1;
-                r_acc_rst_loc <= 1'b0;
+                r_max_shift[0] <= i_loc_max;
+                r_cnt          <= r_cnt + 4'd1;
+                r_acc_rst_loc  <= 1'b0;
+            end
+            for (integer k=1; k<12; k=k+1) begin
+                if ((r_cnt == i_length_mode - 4'd2) && r_load_mask[k])
+                    r_max_shift [k] <= w_max_front;
+                else
+                    r_max_shift [k] <= r_max_shift [k-1];
+                r_valid_pip [k] <= r_valid_pip [k-1];
+                r_temp_pip  [k] <= r_temp_pip  [k-1];
+                r_length_byp[k] <= r_length_byp[k-1];
             end
         end
     end
 
-    // --- 6. 출력 연결 (12단 지연) ---
+    assign o_valid_max       = r_valid_pip[11];
     assign o_global_max      = r_max_shift[11];
     assign o_length_mode_byp = r_length_byp[11];
     assign o_temp            = r_temp_pip[11];
