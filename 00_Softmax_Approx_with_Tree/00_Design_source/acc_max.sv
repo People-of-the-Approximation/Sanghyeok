@@ -147,107 +147,106 @@ endmodule
 
 
 module forwarding_test (
-    // Operation signals
     input  wire           i_clk,
     input  wire           i_en,
     input  wire           i_rst,
 
-    input  wire           i_valid_max,   // 현재 입력되는 Local Max가 유효한지
-    input  wire    [15:0] i_loc_max,     // 현재 입력되는 Local Max
-    input  wire    [3:0]  i_length_mode, // 현재 그룹의 길이 모드
-    input  wire    [15:0] i_temp,        // 동기화할 데이터 (Payload)
+    input  wire           i_valid_max,
+    input  wire    [15:0] i_loc_max,
+    input  wire    [3:0]  i_length_mode,
+    input  wire    [15:0] i_temp,
 
-    output wire           o_valid_max,       // 12클럭 뒤 유효 신호
-    output wire    [15:0] o_global_max,      // 12클럭 뒤 정렬된 Global Max
-    output wire    [3:0]  o_length_mode_byp, // 12클럭 뒤 모드
-    output wire    [15:0] o_temp             // 12클럭 뒤 데이터
+    output wire           o_valid_max,
+    output wire    [15:0] o_global_max,
+    output wire    [3:0]  o_length_mode_byp,
+    output wire    [15:0] o_temp
 );
 
-    // --- 1. 파이프라인 레지스터 선언 ---
-    reg [11:0] r_valid_pip;         // 유효 신호 파이프라인
-    reg [15:0] r_temp_pip   [0:11]; // 데이터 파이프라인
-    reg [15:0] r_max_shift  [0:11]; // Max값 파이프라인 (Forwarding 대상)
-    reg [3:0]  r_length_byp [0:11]; // 모드 파이프라인
+    reg [11:0] r_valid_pip;
+    reg [15:0] r_temp_pip   [0:11];
+    reg [15:0] r_max_shift  [0:11];
+    reg [3:0]  r_length_byp [0:11];
 
-    // --- 2. 제어 신호 및 내부 변수 ---
-    reg [3:0]  r_cnt;           // 그룹 내 데이터 카운터
-    reg        r_acc_rst_loc;   // acc_max를 위한 로컬 리셋 신호
-    reg [11:0] r_load_mask;     // 병렬 로드 위치를 지정하는 마스크
+    reg [3:0]  r_cnt;
+    reg        r_acc_rst_loc;
+    reg [11:0] r_load_mask;
 
-    // acc_max 연결 와이어
-    wire [15:0] w_max_front; // 현재 입력까지 포함한 최신 Max
-    wire [15:0] w_max_acc;   // 레지스터에 저장된 이전 Max
+    wire signed [15:0] w_max_front_s;
+    wire signed [15:0] w_max_acc_s;
 
-    // --- 3. acc_max 인스턴스화 ---
     acc_max u_acc_max (
         .i_clk       (i_clk),
         .i_en        (i_en),
-
         .i_rst       (i_rst),
-        .i_rst_loc   (r_acc_rst_loc), // 그룹 종료 시 리셋 트리거
+        .i_rst_loc   (r_acc_rst_loc),
 
-        .i_valid_max (r_valid_pip),          // forwarding_test는 항상 valid하다고 가정 (Testbench 제어)
-        .i_loc_max   (i_loc_max),
+        .i_valid_max (i_valid_max),
+        .i_loc_max   ($signed(i_loc_max)),
 
-        .o_max_front (w_max_front),   // Combinational Output (Current Max)
-        .o_max_acc   (w_max_acc)      // Registered Output
+        .o_max_front (w_max_front_s),
+        .o_max_acc   (w_max_acc_s)
     );
 
+    wire w_is_group = (i_length_mode >= 4'd3) && (i_length_mode <= 4'd13);
+    wire w_is_end   = w_is_group && (r_cnt == (i_length_mode - 4'd2)) && i_valid_max;
+
     always @(*) begin
-        case (i_length_mode)
-            4'd3:    r_load_mask = 12'b0000_0000_0011;
-            4'd4:    r_load_mask = 12'b0000_0000_0111;
-            4'd5:    r_load_mask = 12'b0000_0000_1111;
-            4'd6:    r_load_mask = 12'b0000_0001_1111;
-            4'd7:    r_load_mask = 12'b0000_0011_1111;
-            4'd8:    r_load_mask = 12'b0000_0111_1111;
-            4'd9:    r_load_mask = 12'b0000_1111_1111;
-            4'd10:   r_load_mask = 12'b0001_1111_1111;
-            4'd11:   r_load_mask = 12'b0011_1111_1111;
-            4'd12:   r_load_mask = 12'b0111_1111_1111;
-            4'd13:   r_load_mask = 12'b1111_1111_1111;
-            default: r_load_mask = 12'b0000_0000_0001;
-        endcase
+        if (w_is_group)
+            r_load_mask = (12'hFFF >> (13 - i_length_mode));
+        else
+            r_load_mask = 12'h000;
     end
 
+    integer k;
     always @(posedge i_clk) begin
         if (i_rst) begin
             r_cnt         <= 4'd0;
             r_acc_rst_loc <= 1'b0;
-            for (integer k=0; k<12; k=k+1) begin
+            r_len_grp     <= 4'd0;
+
+            for (k=0; k<12; k=k+1) begin
                 r_valid_pip [k] <= 1'b0;
                 r_temp_pip  [k] <= 16'd0;
                 r_max_shift [k] <= 16'h8000;
                 r_length_byp[k] <= 4'd0;
             end
-        end 
+        end
         else if (i_en) begin
             r_valid_pip [0] <= i_valid_max;
             r_temp_pip  [0] <= i_temp;
             r_length_byp[0] <= i_length_mode;
-            if ((r_cnt == i_length_mode - 4'd2) && r_load_mask[0]) begin
-                r_max_shift[0] <= w_max_front;
-                r_cnt          <= 4'd0;
-                r_acc_rst_loc  <= 1'b1;
-            end
-            if ((r_cnt == i_length_mode - 4'd2) && r_load_mask[0]) begin
-                r_max_shift[0] <= w_max_front;
-                r_cnt          <= 4'd0;
-                r_acc_rst_loc  <= 1'b1;
-            end
-            else begin
-                r_max_shift[0] <= i_loc_max;
-                r_cnt          <= r_cnt + 4'd1;
-                r_acc_rst_loc  <= 1'b0;
-            end
-            for (integer k=1; k<12; k=k+1) begin
-                if ((r_cnt == i_length_mode - 4'd2) && r_load_mask[k])
-                    r_max_shift [k] <= w_max_front;
-                else
-                    r_max_shift [k] <= r_max_shift [k-1];
+            for (k=1; k<12; k=k+1) begin
                 r_valid_pip [k] <= r_valid_pip [k-1];
                 r_temp_pip  [k] <= r_temp_pip  [k-1];
                 r_length_byp[k] <= r_length_byp[k-1];
+            end
+            if (i_valid_max && (r_cnt == 4'd0))
+                r_len_grp <= i_length_mode;
+            if (w_is_end && r_load_mask[0])
+                r_max_shift[0] <= w_max_front_s;
+            else
+                r_max_shift[0] <= i_loc_max;
+            for (k=1; k<12; k=k+1) begin
+                if (w_is_end && r_load_mask[k])
+                    r_max_shift[k] <= w_max_front_s;
+                else
+                    r_max_shift[k] <= r_max_shift[k-1];
+            end
+            if (!i_valid_max) begin
+                r_cnt         <= 4'd0;
+                r_acc_rst_loc <= 1'b0;
+            end
+            else if (w_is_end) begin
+                r_cnt         <= 4'd0;
+                r_acc_rst_loc <= 1'b1;
+            end
+            else begin
+                if (w_is_group)
+                    r_cnt <= r_cnt + 4'd1;
+                else
+                    r_cnt <= 4'd0;
+
+                r_acc_rst_loc <= 1'b0;
             end
         end
     end
@@ -258,6 +257,7 @@ module forwarding_test (
     assign o_temp            = r_temp_pip[11];
 
 endmodule
+
 
 module acc_max(
     // Operation signals
