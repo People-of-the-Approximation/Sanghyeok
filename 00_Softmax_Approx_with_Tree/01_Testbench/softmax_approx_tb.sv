@@ -14,7 +14,7 @@ module softmax_tb;
 
     // Control and Data signals
     reg           i_valid;
-    reg  [1:0]    i_length_mode;
+    reg  [3:0]    i_length_mode;
     reg  [1023:0] i_in_x_flat;
 
     // Output signals
@@ -91,18 +91,21 @@ module softmax_tb;
         #10; i_in_x_flat = my_x_0; i_valid = 1; i_length_mode = 0;
         #10; i_in_x_flat = my_x_1; i_valid = 1; i_length_mode = 0;
         #10; i_in_x_flat = my_x_2; i_valid = 1; i_length_mode = 0;
-        #10; i_valid = 0; // Gap
-
-        // Mode 1: 32-length
-        #50; i_in_x_flat = my_x_0; i_valid = 1; i_length_mode = 1;
+        #10; i_in_x_flat = my_x_0; i_valid = 1; i_length_mode = 1;
         #10; i_in_x_flat = my_x_1; i_valid = 1; i_length_mode = 1;
         #10; i_in_x_flat = my_x_2; i_valid = 1; i_length_mode = 1;
-        #10; i_valid = 0;
-
-        // Mode 2: 64-length
-        #50; i_in_x_flat = my_x_0; i_valid = 1; i_length_mode = 2;
+        #10; i_in_x_flat = my_x_0; i_valid = 1; i_length_mode = 2;
         #10; i_in_x_flat = my_x_1; i_valid = 1; i_length_mode = 2;
         #10; i_in_x_flat = my_x_2; i_valid = 1; i_length_mode = 2;
+        #10; i_in_x_flat = my_x_0; i_valid = 1; i_length_mode = 3;
+        #10; i_in_x_flat = my_x_1; i_valid = 1; i_length_mode = 3;
+        #10; i_in_x_flat = my_x_0; i_valid = 1; i_length_mode = 4;
+        #10; i_in_x_flat = my_x_1; i_valid = 1; i_length_mode = 4;
+        #10; i_in_x_flat = my_x_2; i_valid = 1; i_length_mode = 4;
+        #10; i_in_x_flat = my_x_0; i_valid = 1; i_length_mode = 5;
+        #10; i_in_x_flat = my_x_1; i_valid = 1; i_length_mode = 5;
+        #10; i_in_x_flat = my_x_2; i_valid = 1; i_length_mode = 5;
+        #10; i_in_x_flat = my_x_0; i_valid = 1; i_length_mode = 5;
         #10; i_valid = 0;
 
         // Wait for pipeline to drain

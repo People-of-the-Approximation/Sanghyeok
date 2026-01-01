@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-module add_tree_64_tb;
+module acc_module_tb;
     // Signals
     reg           i_clk;
     reg           i_en;
@@ -11,6 +11,7 @@ module add_tree_64_tb;
     reg  [1023:0] i_in0_flat; // Bypass용 데이터
     reg  [1023:0] i_in1_flat; // Summation용 데이터
 
+    wire   [31:0] o_global_sum;
     wire   [31:0] o_sum64_0;
     wire   [31:0] o_sum32_0, o_sum32_1;
     wire   [31:0] o_sum16_0, o_sum16_1, o_sum16_2, o_sum16_3;
@@ -26,7 +27,7 @@ module add_tree_64_tb;
     always #5 i_clk = ~i_clk;
 
     // Instantiate add_tree_64
-    add_tree_64 add_tree_test(
+    acc_module acc_module_test(
         .i_clk(i_clk), 
         .i_en(i_en), 
         .i_rst(i_rst),
@@ -36,6 +37,7 @@ module add_tree_64_tb;
         .i_in0_flat(i_in0_flat),
         .i_in1_flat(i_in1_flat),
 
+        .o_global_sum(o_global_sum),
         .o_sum64_0(o_sum64_0),
         .o_sum32_0(o_sum32_0), 
         .o_sum32_1(o_sum32_1),
@@ -60,7 +62,7 @@ module add_tree_64_tb;
             i_valid = 1'b1;
             for (i = 0; i < 64; i = i + 1) begin
                 i_in1_flat[i*16 +: 16] = test_data[i];
-                i_in0_flat[i*16 +: 16] = test_data[i]; // Bypass 데이터도 동일하게 설정
+                i_in0_flat[i*16 +: 16] = test_data[63-i];
             end
             @(posedge i_clk);
             #2.5;
@@ -68,7 +70,7 @@ module add_tree_64_tb;
         end
     endtask
 
-    // Task to display fixed-point value as real number (Q6.10)
+    // Task to display fixed-point value as real number (Q12.10)
     task display_fixed;
         input [31:0] val;
         real real_val;
@@ -81,6 +83,11 @@ module add_tree_64_tb;
     // Result Monitor (Triggers when o_valid_byp is high after 12-cycle latency)
     always @(posedge i_clk) begin
         if (o_valid_byp) begin
+            $write("Length Mode : %0d | ", o_length_mode_byp);
+            $write("\n");
+            $write("global_sum : ");
+            display_fixed(o_global_sum);
+            $write("\n");
             $write("64_sum : "); 
             display_fixed(o_sum64_0); 
             $write("\n");
@@ -149,8 +156,59 @@ module add_tree_64_tb;
         for (k=0; k<64; k=k+1) test_data[k] = 16*k + 16'h0500;
         put_data(4'd0);
 
+        // Test Case 9:
+        for (k=0; k<64; k=k+1) test_data[k] = 16'h0100; 
+        put_data(2'd3); 
+        for (k=0; k<64; k=k+1) test_data[k] = (k+1) * 10;
+        put_data(4'd3);
+
+        // Test Case 10:
+        for (k=0; k<32; k=k+1) test_data[k] = 16'h0100;
+        for (k=32; k<64; k=k+1) test_data[k] = 16'h0200;
+        put_data(4'd4);
+        for (k=0; k<64; k=k+1) test_data[k] = -16'h0100;
+        put_data(4'd4);
+        for (k=0; k<64; k=k+1) test_data[k] = k + 16'h0100;
+        put_data(4'd4);
+
+        // Test Case 11:
+        for (k=0; k<64; k=k+1) test_data[k] = k + 16'hFD00;
+        put_data(4'd4);
+        for (k=0; k<64; k=k+1) test_data[k] = 16*k + 16'hFD00;
+        put_data(4'd4);
+        for (k=0; k<64; k=k+1) test_data[k] = 16*k + 16'h0500;
+        put_data(4'd4);
+
+        // Test Case 12:
+        for (k=0; k<64; k=k+1) test_data[k] = 16'h0100; 
+        put_data(2'd3); 
+        for (k=0; k<64; k=k+1) test_data[k] = (k+1) * 10;
+        put_data(4'd3);
+
+        for (k=0; k<64; k=k+1) test_data[k] = k + 16'hFD00;
+        put_data(4'd3);
+        for (k=0; k<64; k=k+1) test_data[k] = 16*k + 16'hFD00;
+        put_data(4'd3);
+
+        // Test Case 13:
+        for (k=0; k<32; k=k+1) test_data[k] = 16'h0100;
+        for (k=32; k<64; k=k+1) test_data[k] = 16'h0200;
+        put_data(4'd8);
+        for (k=0; k<64; k=k+1) test_data[k] = -16'h0100;
+        put_data(4'd8);
+        for (k=0; k<64; k=k+1) test_data[k] = k + 16'h0100;
+        put_data(4'd8);
+        for (k=0; k<64; k=k+1) test_data[k] = k + 16'hFD00;
+        put_data(4'd8);
+        for (k=0; k<64; k=k+1) test_data[k] = 16*k + 16'hFD00;
+        put_data(4'd8);
+        for (k=0; k<64; k=k+1) test_data[k] = 16*k + 16'h0500;
+        put_data(4'd8);
+        for (k=0; k<64; k=k+1) test_data[k] = -16'h0100;
+        put_data(4'd8);
+
         // Wait for pipeline to drain
-        repeat(20) @(posedge i_clk);
+        repeat(100) @(posedge i_clk);
         $display("Simulation Finished.");
         $finish;
     end

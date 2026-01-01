@@ -13,7 +13,7 @@ module RU_tb;
 
     // Data input signals
     reg         i_valid;
-    reg  [15:0] i_in0;
+    reg  [31:0] i_in0;
     reg  [15:0] i_in1;
 
     // Data output signals
@@ -53,7 +53,7 @@ module RU_tb;
     endtask
 
     task put_data;
-        input [15:0] data0;
+        input [31:0] data0;
         input [15:0] data1;
         begin
             @(negedge i_clk);
@@ -97,25 +97,25 @@ module RU_tb;
         $display("=== RU Module Test Start ===");
         i_sel_mux = 1;  
         i_sel_mult = 1;
-        put_data(16'h0800, 16'h0400);
-        put_data(16'h0C00, 16'h0C00);
-        put_data(16'h1000, 16'h0400);
-        put_data(16'h0400, 16'h0800);
-        put_data(16'h2D44, 16'hE125); 
-        put_data(16'h1000, 16'h1000); 
-        put_data(16'h0000, 16'hFC00);
-        put_data(16'h1800, 16'h1400);
+        put_data(32'h00000800, 16'h0400);
+        put_data(32'h00000C00, 16'h0C00);
+        put_data(32'h00001000, 16'h0400);
+        put_data(32'h00000400, 16'h0800);
+        put_data(32'h00002D44, 16'hE125); 
+        put_data(32'h00001000, 16'h1000); 
+        put_data(32'h00000000, 16'hFC00);
+        put_data(32'h00001800, 16'h1400);
         #150;
         i_sel_mux = 0; 
         i_sel_mult = 0;
-        put_data(16'h0800, 16'h0400);
-        put_data(16'h0C00, 16'h0C00);
-        put_data(16'h1000, 16'h0400);
-        put_data(16'h0400, 16'h0800);
-        put_data(16'h2D44, 16'hE125); 
-        put_data(16'h1000, 16'h1000); 
-        put_data(16'h0000, 16'hFC00);
-        put_data(16'h1800, 16'h1400);
+        put_data(32'h00000800, 16'h0400);
+        put_data(32'h00000C00, 16'h0C00);
+        put_data(32'h00001000, 16'h0400);
+        put_data(32'h00000400, 16'h0800);
+        put_data(32'h00002D44, 16'hE125); 
+        put_data(32'h00001000, 16'h1000); 
+        put_data(32'h00000000, 16'hFC00);
+        put_data(32'h00001800, 16'h1400);
         
         #120;
         $display("=== RU Module Test End ===");

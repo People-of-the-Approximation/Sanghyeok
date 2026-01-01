@@ -5,7 +5,7 @@ module add_tree_64 (
     input  wire           i_rst,
 
     // Length mode input
-    input  wire    [1:0]  i_length_mode,
+    input  wire     [3:0] i_length_mode,
 
     // Data input signals
     input  wire           i_valid,
@@ -13,24 +13,24 @@ module add_tree_64 (
     input  wire [1023:0]  i_in1_flat,
 
     // Data output signals
-    output wire    [15:0] o_sum64_0,
-    output wire    [15:0] o_sum32_0,
-    output wire    [15:0] o_sum32_1,
-    output wire    [15:0] o_sum16_0,
-    output wire    [15:0] o_sum16_1,
-    output wire    [15:0] o_sum16_2,
-    output wire    [15:0] o_sum16_3,
+    output wire    [31:0] o_sum64_0,
+    output wire    [31:0] o_sum32_0,
+    output wire    [31:0] o_sum32_1,
+    output wire    [31:0] o_sum16_0,
+    output wire    [31:0] o_sum16_1,
+    output wire    [31:0] o_sum16_2,
+    output wire    [31:0] o_sum16_3,
 
     // Bypass outputs
-    output wire    [1:0]  o_length_mode_byp,
+    output wire     [3:0] o_length_mode_byp,
     output wire           o_valid_byp,
-    output wire [1023:0]  o_in0_byp
+    output wire  [1023:0] o_in0_byp
 );
     // Stage data signals
-    wire [15:0] stg_data [0:6][0:63];
+    wire [31:0] stg_data [0:6][0:63];
 
     // Bypass registers (12 stages)
-    reg    [1:0]  r_length_mode_byp [0:11];
+    reg    [3:0]  r_length_mode_byp [0:11];
     reg           r_valid_byp       [0:11];
     reg [1023:0]  r_in0_byp         [0:11];
 
@@ -38,7 +38,7 @@ module add_tree_64 (
     always @(posedge i_clk) begin
         if (i_rst) begin
             for (integer k = 0; k <= 11; k = k + 1) begin
-                r_length_mode_byp[k] <= 2'b0;
+                r_length_mode_byp[k] <= 4'b0;
                 r_valid_byp      [k] <= 1'b0;
                 r_in0_byp        [k] <= 1024'd0;
             end
@@ -56,12 +56,12 @@ module add_tree_64 (
     end
 
     // Initial stage assignments
+    // Sign extention for inputs
     generate
         for (genvar i = 0; i < 64; i = i + 1) begin : input_gen
-            assign stg_data[0][i] = i_in1_flat[i*16 +: 16];
+            assign stg_data[0][i] = {{16{i_in1_flat[i*16 + 15]}}, i_in1_flat[i*16 +: 16]};
         end
     endgenerate
-
     // Adder tree generation (6 stages, each stage is 2-cycles)
     generate
         for (genvar j = 0; j < 6; j = j + 1) begin : stages
@@ -80,22 +80,22 @@ module add_tree_64 (
 
     // Output pipelines for 32-mode and 16-mode
     // 2-stage pipe for 32-mode sums
-    reg [15:0] sum32_0_pip [0:1];
-    reg [15:0] sum32_1_pip [0:1];
+    reg [31:0] sum32_0_pip [0:1];
+    reg [31:0] sum32_1_pip [0:1];
     // 4-stage pipe for 16-mode sums
-    reg [15:0] sum16_0_pip [0:3];
-    reg [15:0] sum16_1_pip [0:3];
-    reg [15:0] sum16_2_pip [0:3];
-    reg [15:0] sum16_3_pip [0:3];
+    reg [31:0] sum16_0_pip [0:3];
+    reg [31:0] sum16_1_pip [0:3];
+    reg [31:0] sum16_2_pip [0:3];
+    reg [31:0] sum16_3_pip [0:3];
 
     always @(posedge i_clk) begin
         if (i_rst) begin
             for (integer k = 0; k < 2; k = k + 1) begin
-                sum32_0_pip[k] <= 16'd0; sum32_1_pip[k] <= 16'd0;
+                sum32_0_pip[k] <= 32'd0; sum32_1_pip[k] <= 32'd0;
             end
             for (integer k = 0; k < 4; k = k + 1) begin
-                sum16_0_pip[k] <= 16'd0; sum16_1_pip[k] <= 16'd0;
-                sum16_2_pip[k] <= 16'd0; sum16_3_pip[k] <= 16'd0;
+                sum16_0_pip[k] <= 32'd0; sum16_1_pip[k] <= 32'd0;
+                sum16_2_pip[k] <= 32'd0; sum16_3_pip[k] <= 32'd0;
             end
         end
         else if (i_en) begin
@@ -143,11 +143,11 @@ module add_unit (
     input  wire        i_rst,
 
     // Inputs
-    input  wire [15:0] i_A,
-    input  wire [15:0] i_B,
+    input  wire [31:0] i_A,
+    input  wire [31:0] i_B,
 
     // Output
-    output wire [15:0] o_sum
+    output wire [31:0] o_sum
 );
     // Instantiate FXP Adder IP Core
     // 2-clock cycle latency

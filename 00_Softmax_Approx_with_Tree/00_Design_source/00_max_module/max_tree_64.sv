@@ -5,7 +5,7 @@ module max_tree_64 (
     input  wire          i_rst,
 
     // Length mode input
-    input  wire    [1:0] i_length_mode,
+    input  wire    [3:0] i_length_mode,
 
     // Data input signals
     input  wire   [63:0] i_valid,
@@ -26,8 +26,7 @@ module max_tree_64 (
     output wire   [15:0] o_max16_3,
 
     // Bypass outputs
-    output wire    [1:0] o_length_mode_byp,
-    output wire   [63:0] o_valid_byp,
+    output wire    [3:0] o_length_mode_byp,
     output wire [1023:0] o_in_byp
 );
     // Stage valid and data signals
@@ -35,7 +34,7 @@ module max_tree_64 (
     wire [15:0] stg_data  [0:6][0:63];
 
     // Bypass registers (6 stages)
-    reg    [1:0] r_length_mode_byp [0:5];
+    reg    [3:0] r_length_mode_byp [0:5];
     reg   [63:0] r_valid_byp       [0:5];
     reg [1023:0] r_byp             [0:5];
 
@@ -43,7 +42,7 @@ module max_tree_64 (
     always @(posedge i_clk) begin
         if (i_rst) begin
             for (integer k = 0; k <= 5; k = k + 1) begin
-                r_length_mode_byp[k] <= 2'b0;
+                r_length_mode_byp[k] <= 4'b0;
                 r_valid_byp      [k] <= {64{1'b0}};
                 r_byp            [k] <= {64{16'd0}};
             end

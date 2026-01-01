@@ -9,7 +9,7 @@ module stage1_log2_approx_tb;
 
     // Data input signals
     reg         i_valid;
-    reg  [15:0] i_in0;
+    reg  [31:0] i_in0;
     reg  [15:0] i_in1;
 
     // Data output signals
@@ -36,7 +36,7 @@ module stage1_log2_approx_tb;
         .o_valid    (o_valid),
         .o_log2_in0 (o_log2_in0),
 
-        .o_in0_byp  (o_in0_byp),
+        .o_in0_truc_byp  (o_in0_byp),
         .o_in1_byp  (o_in1_byp)
     );
 
@@ -51,7 +51,7 @@ module stage1_log2_approx_tb;
     endtask
 
     task display_output;
-        input [15:0] in0;
+        input [31:0] in0;
         input [15:0] in1;
         input [15:0] out;
         begin
@@ -73,7 +73,7 @@ module stage1_log2_approx_tb;
         i_en    = 0;
         i_rst   = 0;
         i_valid = 0;
-        i_in0   = 16'd0;
+        i_in0   = 32'd0;
         i_in1   = 16'd0;
         #2.5; 
         i_rst   = 1; #5;
@@ -84,21 +84,21 @@ module stage1_log2_approx_tb;
         #22.5;
         i_en    = 1;
         $display("==== log2_approx test ====");
-        i_in0   = 16'b000000_0000000000;
+        i_in0   = 32'b000000_0000000000_000000_0000000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
         i_valid = 1'b0;
         #5;
 
-        i_in0   = 16'b000000_0000000001;
+        i_in0   = 32'b000000_0000000000_000000_0000000001;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
         i_valid = 1'b0;
         #5;
 
-        i_in0   = 16'b000000_0000000010;
+        i_in0   = 32'b000000_0000000000_000000_0000000010;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -106,7 +106,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
         
-        i_in0   = 16'b000000_0000000100;
+        i_in0   = 32'b000000_0000000000_000000_0000000100;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -114,7 +114,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000000_0000001000;
+        i_in0   = 32'b000000_0000000000_000000_0000001000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -122,7 +122,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000000_0000010000;
+        i_in0   = 32'b000000_0000000000_000000_0000010000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -130,7 +130,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000000_0000100000;
+        i_in0   = 32'b000000_0000000000_000000_0000100000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -138,7 +138,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000000_0000110000;
+        i_in0   = 32'b000000_0000000000_000000_0000110000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -146,7 +146,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000000_0001000000;
+        i_in0   = 32'b000000_0000000000_000000_0001000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -154,7 +154,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000000_0001010000;
+        i_in0   = 32'b000000_0000000000_000000_0001010000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -162,7 +162,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000000_0001100000;
+        i_in0   = 32'b000000_0000000000_000000_0001100000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -170,7 +170,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000000_0001110000;
+        i_in0   = 32'b000000_0000000000_000000_0001110000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -178,7 +178,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000000_0010000000;
+        i_in0   = 32'b000000_0000000000_000000_0010000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -186,7 +186,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000000_0010100000;
+        i_in0   = 32'b000000_0000000000_000000_0010100000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -194,7 +194,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000000_0011000000;
+        i_in0   = 32'b000000_0000000000_000000_0011000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -202,7 +202,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000000_0011100000;
+        i_in0   = 32'b000000_0000000000_000000_0011100000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -210,7 +210,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000000_0100000000;
+        i_in0   = 32'b000000_0000000000_000000_0100000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -218,7 +218,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000000_0101000000;
+        i_in0   = 32'b000000_0000000000_000000_0101000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -226,7 +226,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000000_0110000000;
+        i_in0   = 32'b000000_0000000000_000000_0110000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -234,7 +234,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000000_0111000000;
+        i_in0   = 32'b000000_0000000000_000000_0111000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -242,7 +242,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000000_1000000000;
+        i_in0   = 32'b000000_0000000000_000000_1000000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -250,7 +250,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000000_1010000000;
+        i_in0   = 32'b000000_0000000000_000000_1010000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -258,7 +258,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000000_1100000000;
+        i_in0   = 32'b000000_0000000000_000000_1100000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -266,7 +266,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000000_1110000000;
+        i_in0   = 32'b000000_0000000000_000000_1110000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -274,7 +274,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000001_0000000000;
+        i_in0   = 32'b000000_0000000000_000001_0000000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -282,7 +282,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000001_0100000000;
+        i_in0   = 32'b000000_0000000000_000001_0100000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -290,7 +290,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000001_1000000000;
+        i_in0   = 32'b000000_0000000000_000001_1000000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -298,7 +298,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000001_1100000000;
+        i_in0   = 32'b000000_0000000000_000001_1100000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -306,7 +306,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000010_0000000000;
+        i_in0   = 32'b000000_0000000000_000010_0000000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -314,7 +314,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000010_0100000000;
+        i_in0   = 32'b000000_0000000000_000010_0100000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -322,7 +322,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000010_1000000000;
+        i_in0   = 32'b000000_0000000000_000010_1000000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -330,7 +330,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000010_1100000000;
+        i_in0   = 32'b000000_0000000000_000010_1100000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -338,7 +338,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000011_0000000000;
+        i_in0   = 32'b000000_0000000000_000011_0000000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -346,7 +346,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000011_0100000000;
+        i_in0   = 32'b000000_0000000000_000011_0100000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -354,7 +354,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000011_1000000000;
+        i_in0   = 32'b000000_0000000000_000011_1000000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -362,7 +362,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000011_1100000000;
+        i_in0   = 32'b000000_0000000000_000011_1100000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -370,7 +370,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000100_0000000000;
+        i_in0   = 32'b000000_0000000000_000100_0000000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -378,7 +378,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000100_0100000000;
+        i_in0   = 32'b000000_0000000000_000100_0100000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -386,7 +386,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000100_1000000000;
+        i_in0   = 32'b000000_0000000000_000100_1000000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -394,7 +394,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000100_1100000000;
+        i_in0   = 32'b000000_0000000000_000100_1100000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -402,7 +402,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b000101_0000000000;
+        i_in0   = 32'b000000_0000000000_000101_0000000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -410,7 +410,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b001000_0000000000;
+        i_in0   = 32'b000000_0000000000_001000_0000000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -418,7 +418,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b001010_0000000000;
+        i_in0   = 32'b000000_0000000000_001010_0000000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -426,7 +426,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b010000_0000000000;
+        i_in0   = 32'b000000_0000000000_010000_0000000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -434,7 +434,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
         
-        i_in0   = 16'b010101_0000000000;
+        i_in0   = 32'b000000_0000000000_010101_0000000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -442,7 +442,7 @@ module stage1_log2_approx_tb;
         #5;
 
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
-        i_in0   = 16'b011111_0000000000;
+        i_in0   = 32'b000000_0000000000_011111_0000000000;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
@@ -450,7 +450,7 @@ module stage1_log2_approx_tb;
         #5;
         display_output(o_in0_byp, o_in1_byp, o_log2_in0);
 
-        i_in0   = 16'b011111_1111111111;
+        i_in0   = 32'b011100_1111000000_011111_1111111111;
         i_in1   = 16'b000000_0001000000;
         i_valid = 1'b1;
         #5; 
