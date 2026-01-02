@@ -7,46 +7,37 @@ module stage1_log2_approx(
 
     // Data input signals
     input  wire        i_valid,
-    input  wire [31:0] i_in0,     // Input: Q12.10 (inside 32-bit container)
+    // Input: Q22.10
+    input  wire [31:0] i_in0,
     input  wire [15:0] i_in1,
 
     // Data output signals
     output wire        o_valid,
-    output wire [15:0] o_log2_in0, // Output: Q6.10
-
+    output wire [15:0] o_log2_in0,
     // Bypass outputs
-    output wire [15:0] o_in0_truc_byp, // Truncated/Bypassed Input 0
-    output wire [15:0] o_in1_byp       // Bypassed Input 1
+    output wire [15:0] o_in0_byp,
+    output wire [15:0] o_in1_byp
 );
-
-    // --------------------------------------------------------
-    // Pipeline Registers
-    // --------------------------------------------------------
+    // Pipeline stage registers
     // Stage 0: Input Capture
     // Width: Valid(1) + In1(16) + In0(32) = 49 bits
     reg   [48:0] r_stg0;
-
     // Stage 1: LZC Result + Data Hold
     // Width: Valid(1) + ZeroCnt(5) + In1(16) + In0(32) = 54 bits
     // Note: We need full i_in0 to calculate fractional part in Stage 2 logic
     reg   [53:0] r_stg1;
-
     // Stage 2: Final Result
     // Width: Valid(1) + LogResult(16) + In1_Byp(16) + In0_Byp(16) = 49 bits
     reg   [48:0] r_stg2;
 
-    // --------------------------------------------------------
     // Internal Signals
-    // --------------------------------------------------------
     reg   [4:0]  zero_cnt;
-    reg   [5:0]  int_part;     // Q6.0 integer part of log2
-    wire  [31:0] shifted_val;  // For fraction extraction
-    wire  [9:0]  frac_part;    // Q0.10 fractional part of log2
-    wire  [15:0] result_log;   // Combined Q6.10 result
+    reg   [5:0]  int_part;
+    wire  [31:0] shifted_val;
+    wire  [9:0]  frac_part;
+    wire  [15:0] result_log;
 
-    // --------------------------------------------------------
     // Sequential Logic : Pipeline Registers
-    // --------------------------------------------------------
     always @(posedge i_clk) begin
         if (i_rst) begin
             r_stg0 <= 49'd0;
@@ -56,11 +47,9 @@ module stage1_log2_approx(
         else if (i_en) begin
             // Stage 0: Input registration
             r_stg0 <= {i_valid, i_in1, i_in0};
-
             // Stage 1: Leading zero count result & Pass data
             // r_stg0 Structure: {valid(48), in1(47:32), in0(31:0)}
             r_stg1 <= {r_stg0[48], zero_cnt, r_stg0[47:32], r_stg0[31:0]};
-
             // Stage 2: Log2 Approximation & Bypass formatting
             // r_stg1 Structure: {valid(53), zcnt(52:48), in1(47:32), in0(31:0)}
             // Bypass logic: in0 is truncated to 16 bits (r_stg1[15:0])
@@ -68,9 +57,7 @@ module stage1_log2_approx(
         end
     end
 
-    // --------------------------------------------------------
     // Combinational Logic : Stage 0 -> Stage 1 (LZC)
-    // --------------------------------------------------------
     always @(*) begin
         casex (r_stg0[31:0])
             32'b01xx_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx: zero_cnt = 5'd1;
@@ -104,17 +91,14 @@ module stage1_log2_approx(
             32'b0000_0000_0000_0000_0000_0000_0000_01xx: zero_cnt = 5'd29;
             32'b0000_0000_0000_0000_0000_0000_0000_001x: zero_cnt = 5'd30;
             32'b0000_0000_0000_0000_0000_0000_0000_0001: zero_cnt = 5'd31;
-            default:                                     zero_cnt = 5'd0; // Handle 0 input or min
+            default:                                     zero_cnt = 5'd0;
         endcase
     end
 
-    // --------------------------------------------------------
     // Combinational Logic : Stage 1 -> Stage 2 (Log Calc)
-    // --------------------------------------------------------
     // r_stg1 slices: [52:48]=zero_cnt, [31:0]=i_in0
     wire [4:0]  stg1_zero_cnt = r_stg1[52:48];
     wire [31:0] stg1_in0      = r_stg1[31:0];
-
     // 1. Integer Part Calculation for Q12.10 Input
     // Formula: log2_int = (31 - zero_cnt) - 10 = 21 - zero_cnt
     // This supports negative logs (e.g., if input < 1.0)
@@ -157,23 +141,21 @@ module stage1_log2_approx(
         endcase
     end
 
-    // 2. Fractional Part Calculation (Mitchell's Approximation)
+    // Fractional Part Calculation (Mitchell's Approximation)
     // Shift the input left so the MSB is aligned to bit 31
     assign shifted_val = stg1_in0 << stg1_zero_cnt;
-
     // The fractional part comes from the bits immediately following the MSB.
     // Since MSB is at 31 after shift, we discard it (implicit 1) and take [30:21]
     assign frac_part = shifted_val[30:21];
-
-    // 3. Assemble Result (Q6.10)
+    // Assemble Result (Q6.10)
     assign result_log = {int_part, frac_part};
 
-    // --------------------------------------------------------
     // Output Assignments
-    // --------------------------------------------------------
-    assign o_valid        = r_stg2[48];
-    assign o_log2_in0     = r_stg2[47:32];
-    assign o_in1_byp      = r_stg2[31:16];
-    assign o_in0_truc_byp = r_stg2[15:0];
-
+    // Valid signal and log2 output
+    assign o_valid    = r_stg2[48];
+    assign o_log2_in0 = r_stg2[47:32];
+    // Bypass outputs
+    assign o_in1_byp  = r_stg2[31:16];
+    // Bypass output (truncated in0)
+    assign o_in0_byp  = r_stg2[15:0];
 endmodule

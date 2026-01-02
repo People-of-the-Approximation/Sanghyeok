@@ -72,8 +72,8 @@ module stage3_pow2_approx(
 
     // Output assignments
     // Valid signal and pow2 output
-    assign o_valid    = r_stg1[32];
-    assign o_pow_x    = r_stg1[31:16];
+    assign o_valid = r_stg1[32];
+    assign o_pow_x = r_stg1[31:16];
     // Bypass output
     assign o_x_byp = r_stg1[15:0];
 endmodule

@@ -1,19 +1,19 @@
 module softmax_approx (
     // Operation signals
-    input  wire           i_clk,
-    input  wire           i_en,
-    input  wire           i_rst,
+    input  wire          i_clk,
+    input  wire          i_en,
+    input  wire          i_rst,
 
     // Length mode input
-    input  wire    [3:0]  i_length_mode,
+    input  wire    [3:0] i_length_mode,
 
     // Data input signals
-    input  wire           i_valid,
-    input  wire [1023:0]  i_in_x_flat,
+    input  wire          i_valid,
+    input  wire [1023:0] i_in_x_flat,
 
     // Data output signals
-    output wire           o_valid,
-    output wire [1023:0]  o_prob_flat
+    output wire          o_valid,
+    output wire [1023:0] o_prob_flat
 );
     // Internal signals for Max Tree
     wire          w_valid_max_out;

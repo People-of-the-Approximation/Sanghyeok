@@ -33,7 +33,7 @@ module RU (
     wire [31:0] w_mult_result;
 
     // Pipeline valid signal for stage3
-    wire w_valid_log;
+    wire      w_valid_log;
     reg [5:0] valid_pip;
 
     // Pipeline valid signal
@@ -89,7 +89,7 @@ module RU (
         .o_valid   (w_valid_log),
         .o_log2_in0(w_log_in0),
 
-        .o_in0_truc_byp (w_in0_byp),
+        .o_in0_byp (w_in0_byp),
         .o_in1_byp (w_in1_byp)
     );
 
