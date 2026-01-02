@@ -12,14 +12,9 @@ module max_tree_64 (
     input  wire [1023:0] i_in_flat,
 
     // Data output signals
-    // Max valid signals
-    output wire          o_valid_max,
-    // 64-mode max output
     output wire   [15:0] o_max64_0,
-    // 32-mode max outputs
     output wire   [15:0] o_max32_0,
     output wire   [15:0] o_max32_1,
-    // 16-mode max outputs
     output wire   [15:0] o_max16_0,
     output wire   [15:0] o_max16_1,
     output wire   [15:0] o_max16_2,
@@ -27,6 +22,7 @@ module max_tree_64 (
 
     // Bypass outputs
     output wire    [3:0] o_length_mode_byp,
+    output wire          o_valid_max,
     output wire [1023:0] o_in_byp
 );
     // Stage valid and data signals
@@ -104,7 +100,6 @@ module max_tree_64 (
             // 32-mode reset (1 stage)
             max32_0_pip <= 16'd0;
             max32_1_pip <= 16'd0;
-
             // 16-mode reset (2 stages)
             for (integer k = 0; k < 2; k = k + 1) begin
                 max16_0_pip[k] <= 16'd0;
@@ -145,7 +140,6 @@ module max_tree_64 (
     assign o_max16_3   = max16_3_pip[1];
     // Bypass outputs
     assign o_length_mode_byp = r_length_mode_byp[5];
-    assign o_valid_byp       = r_valid_byp      [5];
     assign o_in_byp          = r_byp            [5];
 
 endmodule

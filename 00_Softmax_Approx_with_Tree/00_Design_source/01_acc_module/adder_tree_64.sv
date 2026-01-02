@@ -1,30 +1,30 @@
 module add_tree_64 (
     // Operation signals
-    input  wire           i_clk,
-    input  wire           i_en,
-    input  wire           i_rst,
+    input  wire          i_clk,
+    input  wire          i_en,
+    input  wire          i_rst,
 
     // Length mode input
-    input  wire     [3:0] i_length_mode,
+    input  wire    [3:0] i_length_mode,
 
     // Data input signals
-    input  wire           i_valid,
-    input  wire [1023:0]  i_in0_flat,
-    input  wire [1023:0]  i_in1_flat,
+    input  wire          i_valid,
+    input  wire [1023:0] i_in0_flat,
+    input  wire [1023:0] i_in1_flat,
 
     // Data output signals
-    output wire    [31:0] o_sum64_0,
-    output wire    [31:0] o_sum32_0,
-    output wire    [31:0] o_sum32_1,
-    output wire    [31:0] o_sum16_0,
-    output wire    [31:0] o_sum16_1,
-    output wire    [31:0] o_sum16_2,
-    output wire    [31:0] o_sum16_3,
+    output wire   [31:0] o_sum64_0,
+    output wire   [31:0] o_sum32_0,
+    output wire   [31:0] o_sum32_1,
+    output wire   [31:0] o_sum16_0,
+    output wire   [31:0] o_sum16_1,
+    output wire   [31:0] o_sum16_2,
+    output wire   [31:0] o_sum16_3,
 
     // Bypass outputs
-    output wire     [3:0] o_length_mode_byp,
-    output wire           o_valid_byp,
-    output wire  [1023:0] o_in0_byp
+    output wire    [3:0] o_length_mode_byp,
+    output wire          o_valid_byp,
+    output wire [1023:0] o_in0_byp
 );
     // Stage data signals
     wire [31:0] stg_data [0:6][0:63];
@@ -70,14 +70,15 @@ module add_tree_64 (
                     .i_clk(i_clk),
                     .i_en (i_en),
                     .i_rst(i_rst),
+
                     .i_A  (stg_data[j][2*i]),
                     .i_B  (stg_data[j][2*i+1]),
+                    
                     .o_sum(stg_data[j+1][i])
                 );
             end
         end
     endgenerate
-
     // Output pipelines for 32-mode and 16-mode
     // 2-stage pipe for 32-mode sums
     reg [31:0] sum32_0_pip [0:1];
@@ -88,14 +89,20 @@ module add_tree_64 (
     reg [31:0] sum16_2_pip [0:3];
     reg [31:0] sum16_3_pip [0:3];
 
+    // Pipeline registers
     always @(posedge i_clk) begin
         if (i_rst) begin
             for (integer k = 0; k < 2; k = k + 1) begin
-                sum32_0_pip[k] <= 32'd0; sum32_1_pip[k] <= 32'd0;
+                // 32-mode reset (2 stage)
+                sum32_0_pip[k] <= 32'd0; 
+                sum32_1_pip[k] <= 32'd0;
             end
             for (integer k = 0; k < 4; k = k + 1) begin
-                sum16_0_pip[k] <= 32'd0; sum16_1_pip[k] <= 32'd0;
-                sum16_2_pip[k] <= 32'd0; sum16_3_pip[k] <= 32'd0;
+                // 16-mode reset (4 stages)
+                sum16_0_pip[k] <= 32'd0; 
+                sum16_1_pip[k] <= 32'd0;
+                sum16_2_pip[k] <= 32'd0; 
+                sum16_3_pip[k] <= 32'd0;
             end
         end
         else if (i_en) begin
@@ -117,7 +124,6 @@ module add_tree_64 (
             end
         end
     end
-
     // Output assignments
     // 64-mode output
     assign o_sum64_0     = stg_data[6][0];
