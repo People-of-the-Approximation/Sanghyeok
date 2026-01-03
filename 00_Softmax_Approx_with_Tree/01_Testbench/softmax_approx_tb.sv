@@ -8,9 +8,9 @@ module softmax_tb;
     localparam [1023:0] my_x_2 = {8{16'h00F7, 16'h0AC0, 16'h0A99, 16'h09D6, 16'hFF4D, 16'hF72D, 16'hFF90, 16'h0B2A}};
 
     // Operation signals
-    reg         i_clk;
-    reg         i_en;
-    reg         i_rst;
+    reg          i_clk;
+    reg          i_en;
+    reg          i_rst;
 
     // Control and Data signals
     reg           i_valid;
@@ -38,14 +38,17 @@ module softmax_tb;
 
     // DUT Instantiation
     softmax_approx DUT (
-        .i_clk(i_clk),
-        .i_en(i_en),
-        .i_rst(i_rst),
+        .i_clk        (i_clk),
+        .i_en         (i_en),
+        .i_rst        (i_rst),
+
         .i_length_mode(i_length_mode),
-        .i_valid(i_valid),
-        .i_in_x_flat(i_in_x_flat),
-        .o_valid(o_valid),
-        .o_prob_flat(o_prob_flat)
+
+        .i_valid      (i_valid),
+        .i_in_x_flat  (i_in_x_flat),
+
+        .o_valid      (o_valid),
+        .o_prob_flat  (o_prob_flat)
     );
 
     // Task to display fixed-point value as real (Q6.10)
@@ -97,15 +100,19 @@ module softmax_tb;
         #10; i_in_x_flat = my_x_0; i_valid = 1; i_length_mode = 2;
         #10; i_in_x_flat = my_x_1; i_valid = 1; i_length_mode = 2;
         #10; i_in_x_flat = my_x_2; i_valid = 1; i_length_mode = 2;
+
         #10; i_in_x_flat = my_x_0; i_valid = 1; i_length_mode = 3;
         #10; i_in_x_flat = my_x_1; i_valid = 1; i_length_mode = 3;
+
         #10; i_in_x_flat = my_x_0; i_valid = 1; i_length_mode = 4;
         #10; i_in_x_flat = my_x_1; i_valid = 1; i_length_mode = 4;
         #10; i_in_x_flat = my_x_2; i_valid = 1; i_length_mode = 4;
+
         #10; i_in_x_flat = my_x_0; i_valid = 1; i_length_mode = 5;
         #10; i_in_x_flat = my_x_1; i_valid = 1; i_length_mode = 5;
         #10; i_in_x_flat = my_x_2; i_valid = 1; i_length_mode = 5;
         #10; i_in_x_flat = my_x_0; i_valid = 1; i_length_mode = 5;
+        
         #10; i_valid = 0;
 
         // Wait for pipeline to drain

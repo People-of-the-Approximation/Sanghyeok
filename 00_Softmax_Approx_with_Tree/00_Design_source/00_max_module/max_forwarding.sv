@@ -120,20 +120,11 @@ module max_forwarding (
     assign w_max_acc_s   = r_max_acc;
     // Accumulator assignments
     assign r_max_front = ($signed(r_max_acc) > $signed(i_loc_max)) ? r_max_acc : i_loc_max;
-    // Accumulator logic
-    always @(posedge i_clk) begin
-        if (i_rst) begin
-            r_max_acc <= 16'h8000;
-        end
-        else if (i_en & i_valid_max) begin
-            r_max_acc <= r_max_front;
-        end
-    end
-
-    // Forwarding logic
+    // Accumulator and Forwarding logic
     always @(posedge i_clk) begin
         if (i_rst) begin
             r_cnt <= 4'd0;
+            r_max_acc <= 16'h8000;
             for (integer k=0; k<12; k=k+1) begin
                 r_max_shift [k] <= 16'h8000;
             end
@@ -155,7 +146,6 @@ module max_forwarding (
             end
             if (~i_valid_max) begin
                 r_cnt <= 4'd0;
-
             end
             else if (w_is_end) begin
                 r_cnt     <= 4'd0;
@@ -164,6 +154,7 @@ module max_forwarding (
             else begin
                 if (w_is_group) begin
                     r_cnt     <= r_cnt + 4'd1;
+                    r_max_acc <= r_max_front;
                 end 
                 else begin
                     r_cnt     <= 4'd0;

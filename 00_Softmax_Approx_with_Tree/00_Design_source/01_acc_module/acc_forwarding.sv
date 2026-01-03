@@ -120,20 +120,11 @@ module acc_forwarding (
     assign w_sum_acc_s   = r_sum_acc;
     // Accumulator assignments
     assign r_sum_front = $signed(r_sum_acc) + $signed(i_loc_sum);
-    // Accumulator logic
-    always @(posedge i_clk) begin
-        if (i_rst) begin
-            r_sum_acc <= 32'd0;
-        end
-        else if (i_en & i_valid_sum) begin
-            r_sum_acc <= r_sum_front;
-        end
-    end
-
-    // Forwarding logic
+    // Accumulator and Forwarding logic
     always @(posedge i_clk) begin
         if (i_rst) begin
             r_cnt <= 4'd0;
+            r_sum_acc <= 32'd0;
             for (integer k=0; k<12; k=k+1) begin
                 r_sum_shift [k] <= 32'd0;
             end
@@ -162,7 +153,8 @@ module acc_forwarding (
             end
             else begin
                 if (w_is_group) begin
-                    r_cnt <= r_cnt + 4'd1;
+                    r_cnt     <= r_cnt + 4'd1;
+                    r_sum_acc <= r_sum_front;
                 end 
                 else begin
                     r_cnt     <= 4'd0;
