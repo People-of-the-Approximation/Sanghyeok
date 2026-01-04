@@ -1,6 +1,6 @@
 module fpga_softmax_top(
     input  wire       i_clk,  // System Clock (e.g., 50MHz or 100MHz)
-    input  wire       i_rst,  // System Reset
+    input  wire       i_rstn,  // System Reset
 
     // UART Hardware Pins
     input  wire       i_rxd,
@@ -9,7 +9,8 @@ module fpga_softmax_top(
     // Debug LEDs (Optional)
     output wire [3:0] o_led
 );
-
+    wire i_rst;
+    assign i_rst = ~i_rstn; // Active High Reset
     // --- Signals ---
     wire        w_rx_done;
     wire [7:0]  w_rx_data;
