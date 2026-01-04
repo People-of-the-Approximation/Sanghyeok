@@ -137,15 +137,15 @@ module BRAM_FSM(
                 S_W_WRITE: begin
                     if (r_write_addr == 5'd23) begin
                         r_write_state <= S_W_DONE;
+                        o_cena        <= 1'b0;
+                        o_wea         <= 1'b0;
+                        r_write_addr  <= 5'd12;
                     end else begin
                         r_write_addr <= r_write_addr + 5'd1;
                     end
                 end
                 S_W_DONE: begin
-                    o_cena        <= 1'b0;
-                    o_wea         <= 1'b0;
                     r_write_state <= S_W_IDLE;
-                    r_write_addr  <= 5'd12;
                 end
                 default: r_write_state <= S_W_IDLE;
             endcase

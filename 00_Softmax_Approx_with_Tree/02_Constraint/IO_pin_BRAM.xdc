@@ -5,8 +5,3 @@ create_clock -add -name sys_clk_pin -period 10.000 [get_ports { i_clk }];
 
 set_property -dict { PACKAGE_PIN C12 IOSTANDARD LVCMOS33 } [get_ports { i_rst }];
 # rst : C12
-
-set_property -dict { PACKAGE_PIN C4 IOSTANDARD LVCMOS33 } [get_ports { i_rxd }];
-set_property -dict { PACKAGE_PIN D4 IOSTANDARD LVCMOS33 } [get_ports { o_txd }];
-# rx pin : C4
-# tx pin : D4
