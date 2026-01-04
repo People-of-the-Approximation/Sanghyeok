@@ -5,8 +5,8 @@ import os
 # --- 설정 ---
 SER_PORT = "COM3"
 BAUD_RATE = 115200
-TIMEOUT = 10
-DEPTH_VAL = 11  # [추가] FPGA로 먼저 보낼 Depth 값 (0~255, 1바이트)
+TIMEOUT = 5
+DEPTH_VAL = 23  # [추가] FPGA로 먼저 보낼 Depth 값 (0~255, 1바이트)
 
 # 파일 경로 (절대 경로 권장)
 INPUT_FILE = r"C:\Users\PSH\DigitalCircuit\Softmax_Design\00_Softmax_Approx_with_Tree\07_top_module\input_1028b.hex"
@@ -51,7 +51,7 @@ def main():
     print("✅ Transmission Complete.")
 
     # 4. 데이터 수신 (FPGA -> Output)
-    expected_bytes = 12 * 129
+    expected_bytes = (DEPTH_VAL + 1) * 129
     print(f"\n📥 Waiting for {expected_bytes} bytes from FPGA...")
 
     start_time = time.time()
@@ -71,7 +71,7 @@ def main():
 
     try:
         with open(OUTPUT_FILE, "w") as f:
-            for i in range(12):
+            for i in range(DEPTH_VAL + 1):
                 # 1. 129바이트씩 자르기
                 chunk = rx_bytes[i * 129 : (i + 1) * 129]
 

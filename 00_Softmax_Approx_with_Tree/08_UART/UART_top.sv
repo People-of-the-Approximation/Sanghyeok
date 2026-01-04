@@ -30,6 +30,7 @@ module fpga_softmax_top(
 
     wire        ctrl_start_core;
     wire        core_busy;
+    wire  [7:0] ctrl_core_depth;
 
     uart_rx  u_rx(
         .i_clk(i_clk), 
@@ -73,6 +74,7 @@ module fpga_softmax_top(
         // Core Control
         .o_core_start(ctrl_start_core), 
         .i_core_busy(core_busy),
+        .o_core_depth(ctrl_core_depth),
         .o_debug_state(o_led)
     );
 
@@ -84,6 +86,7 @@ module fpga_softmax_top(
         .i_en(1'b1),            // 항상 Enable
         .i_start(ctrl_start_core),
         .o_busy(core_busy),
+        .i_depth(ctrl_core_depth),
 
         // External Write Interface (Connected to Controller)
         .i_ext_cena(ctrl_cena),
