@@ -5,27 +5,28 @@ module softmax_core(
     input  wire          i_en,
     input  wire          i_start,
     output wire          o_busy,
+    input  wire    [7:0] i_depth,
 
     // External Memory Interface (CPU or Controller Access)
     // External Write Port (Port A)
     input  wire          i_ext_cena,   // External Chip Enable
     input  wire          i_ext_wea,    // External Write Enable
-    input  wire    [4:0] i_ext_addra,  // External Address
+    input  wire    [7:0] i_ext_addra,  // External Address
     input  wire [1027:0] i_ext_dina,   // External Data Input
     
     // External Read Port (Port B)
     input  wire          i_ext_cenb,   // External Chip Enable
-    input  wire    [4:0] i_ext_addrb,  // External Address
+    input  wire    [7:0] i_ext_addrb,  // External Address
     output wire [1027:0] o_ext_doutb   // External Data Output
 );
     // Signals from BRAM_FSM (Core Internal)
     wire          core_cena;
     wire          core_wea;
-    wire    [4:0] core_addra;
+    wire    [7:0] core_addra;
     wire [1027:0] core_dina;
     
     wire          core_cenb;
-    wire    [4:0] core_addrb;
+    wire    [7:0] core_addrb;
     wire [1027:0] core_doutb;
 
     // Softmax Interface Signals (Between FSM and Approx Core)
@@ -38,11 +39,11 @@ module softmax_core(
     // Final MUXed Signals to BRAM
     wire          final_cena;
     wire          final_wea;
-    wire    [4:0] final_addra;
+    wire    [7:0] final_addra;
     wire [1027:0] final_dina;
     
     wire          final_cenb;
-    wire    [4:0] final_addrb;
+    wire    [7:0] final_addrb;
     wire [1027:0] final_doutb;
 
     // Busy Signal Buffer
@@ -55,7 +56,8 @@ module softmax_core(
         .i_rst        (i_rst),
         .i_start      (i_start),
         .o_busy       (w_busy),       // Indicates if Core is working
-        
+        .i_depth      (i_depth),
+
         // FSM Access to BRAM
         .o_cena       (core_cena),
         .o_wea        (core_wea),

@@ -3,6 +3,7 @@ module BRAM_FSM(
     input  wire          i_clk,
     input  wire          i_en,
     input  wire          i_rst,
+    input  wire    [7:0] i_depth,
 
     // Start Pulse
     input  wire          i_start,
@@ -13,11 +14,11 @@ module BRAM_FSM(
     // Port A: Write Only
     output reg           o_cena,   // Chip Enable
     output reg           o_wea,    // Write Enable
-    output reg     [4:0] o_addra,  // Address
+    output reg     [7:0] o_addra,  // Address
     output wire [1027:0] o_dina,   // Data Input (Result to BRAM)
     // Port B: Read Only
     output reg           o_cenb,   // Chip Enable
-    output wire    [4:0] o_addrb,  // Address
+    output wire    [7:0] o_addrb,  // Address
     input  wire [1027:0] i_doutb,  // Data Output (Source from BRAM)
 
     // Softmax Interface (FSM -> Softmax)
@@ -45,7 +46,7 @@ module BRAM_FSM(
 
     // Internal Registers
     reg [2:0] r_read_state;
-    reg [4:0] r_read_addr;
+    reg [7:0] r_read_addr;
     reg [2:0] r_valid;
 
     assign o_valid       = r_valid[2];
@@ -53,7 +54,7 @@ module BRAM_FSM(
     assign o_in_x_flat   = i_doutb[1023:0];
 
     reg [2:0] r_write_state;
-    reg [4:0] r_write_addr;
+    reg [7:0] r_write_addr;
     reg [1023:0] r_dina_buffer;
 
     // Logic assignments
@@ -61,12 +62,11 @@ module BRAM_FSM(
     assign o_addra = r_write_addr;
     assign o_dina  = {4'b0000, r_dina_buffer}; // Combine mode + result
 
-
     // 1. Read FSM (Port B & Softmax Input)
     always @(posedge i_clk) begin
         if (i_rst) begin
             r_read_state  <= S_R_IDLE;
-            r_read_addr   <= 5'd0;
+            r_read_addr   <= 8'd0;
             o_busy        <= 1'b0;
             o_cenb        <= 1'b0;
             r_valid       <= 3'b000;
@@ -78,20 +78,20 @@ module BRAM_FSM(
                 S_R_IDLE: begin
                     if (i_start) begin
                         r_read_state <= S_R_READ;
-                        r_read_addr  <= 5'd0;
+                        r_read_addr  <= 8'd0;
                         o_cenb       <= 1'b1;
                         o_busy       <= 1'b1;
                         r_valid[0]   <= 1'b1;
                     end
                 end
                 S_R_READ: begin
-                    if (r_read_addr == 5'd11) begin
+                    if (r_read_addr == i_depth) begin
                         r_read_state <= S_R_DONE;
-                        r_read_addr  <= 5'd0;
+                        r_read_addr  <= 8'd0;
                         r_valid[0]   <= 1'b0;
                     end 
                     else begin
-                        r_read_addr  <= r_read_addr + 5'd1;
+                        r_read_addr  <= r_read_addr + 8'd1;
                     end
                 end
                 S_R_DONE: begin
@@ -112,7 +112,7 @@ module BRAM_FSM(
     always @(posedge i_clk) begin
         if (i_rst) begin
             r_write_state <= S_W_IDLE;
-            r_write_addr  <= 5'd0;
+            r_write_addr  <= 8'd0;
             o_cena        <= 1'b0; // Inactive High
             o_wea         <= 1'b0;
             r_dina_buffer <= 1024'd0;
@@ -123,7 +123,7 @@ module BRAM_FSM(
                     // Start waiting when Read FSM begins processing
                     if (r_read_state == S_R_READ) begin
                         r_write_state <= S_W_WAIT;
-                        r_write_addr  <= 5'd12; // Starting Write Address
+                        r_write_addr  <= 8'd0; // Starting Write Address
                     end
                 end
                 S_W_WAIT: begin
@@ -135,13 +135,13 @@ module BRAM_FSM(
                     end
                 end
                 S_W_WRITE: begin
-                    if (r_write_addr == 5'd23) begin
+                    if (r_write_addr == i_depth) begin
                         r_write_state <= S_W_DONE;
                         o_cena        <= 1'b0;
                         o_wea         <= 1'b0;
-                        r_write_addr  <= 5'd12;
+                        r_write_addr  <= 8'd0;
                     end else begin
-                        r_write_addr <= r_write_addr + 5'd1;
+                        r_write_addr <= r_write_addr + 8'd1;
                     end
                 end
                 S_W_DONE: begin
@@ -160,12 +160,12 @@ module BRAM (
     // Data signals A (Write Port)
     input  wire          i_cena,
     input  wire          i_wea,
-    input  wire    [4:0] i_addra,
+    input  wire    [7:0] i_addra,
     input  wire [1027:0] i_dina,
 
     // Data signals B (Read Port)
     input  wire          i_cenb,
-    input  wire    [4:0] i_addrb,
+    input  wire    [7:0] i_addrb,
     output wire [1027:0] o_doutb
 );
 

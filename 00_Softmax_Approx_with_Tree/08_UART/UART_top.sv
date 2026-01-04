@@ -19,13 +19,13 @@ module fpga_softmax_top(
     wire        w_tx_active;
 
     // Controller <-> Softmax Core Connections
-    wire        ctrl_cena;
-    wire        ctrl_wea;
-    wire  [4:0] ctrl_addra;
+    wire         ctrl_cena;
+    wire         ctrl_wea;
+    wire    [7:0] ctrl_addra;
     wire [1027:0] ctrl_dina;
     
-    wire        ctrl_cenb;
-    wire  [4:0] ctrl_addrb;
+    wire         ctrl_cenb;
+    wire    [7:0] ctrl_addrb;
     wire [1027:0] ctrl_doutb;
 
     wire        ctrl_start_core;

@@ -14,16 +14,17 @@ module tb_softmax;
     wire          tester_start;
     wire          tester_rst;
     wire          tester_busy;
+    wire    [7:0] tester_depth;
 
     // External Write Port (Port A)
     wire          tester_ext_cena;
     wire          tester_ext_wea;
-    wire    [4:0] tester_ext_addra;
+    wire    [7:0] tester_ext_addra;
     wire [1027:0] tester_ext_dina;
 
     // External Read Port (Port B)
     wire          tester_ext_cenb;
-    wire    [4:0] tester_ext_addrb;
+    wire    [7:0] tester_ext_addrb;
     wire [1027:0] tester_ext_doutb;
 
     // (3) Module Instantiation (DUT)
@@ -33,6 +34,7 @@ module tb_softmax;
         .i_en           (tester_en),
         .i_start        (tester_start),
         .o_busy         (tester_busy),
+        .i_depth        (tester_depth),
 
         // External Write Port
         .i_ext_cena     (tester_ext_cena),
@@ -49,6 +51,7 @@ module tb_softmax;
     // (4) Tester Instantiation
     softmax_tester tester_inst(
         .i_clk          (clk),
+        .o_depth        (tester_depth),
         
         .o_rst          (tester_rst),
         .o_en           (tester_en),
@@ -71,6 +74,7 @@ endmodule
 
 module softmax_tester(
     input  wire           i_clk,
+    output  reg     [7:0] o_depth,
     
     // System Control
     output reg            o_rst,
@@ -81,23 +85,22 @@ module softmax_tester(
     // Write Port Interface
     output reg            o_ext_cena,
     output reg            o_ext_wea,
-    output reg      [4:0] o_ext_addra,
+    output reg      [7:0] o_ext_addra,
     output reg   [1027:0] o_ext_dina,
 
     // Read Port Interface
     output reg            o_ext_cenb,
-    output reg      [4:0] o_ext_addrb,
+    output reg      [7:0] o_ext_addrb,
     input  wire  [1027:0] i_ext_doutb
 );
 
     // Memory Depth Constants
-    localparam INPUT_DEPTH  = 12; // Address 0 to 11
-    localparam OUTPUT_DEPTH = 12; // Address 12 to 23 (Assuming output follows input)
+    localparam DEPTH  = 17; // Address 0 to 11
 
     // Internal Memory for Verification
-    reg [1027:0] local_input_data  [0:11]; // Buffer for Input Hex
-    reg [1027:0] golden_output_data[0:11]; // Buffer for Expected Output Hex
-    reg [1027:0] read_back_data    [0:11]; // Buffer for Read Result
+    reg [1027:0] local_input_data  [0:16]; // Buffer for Input Hex
+    reg [1027:0] golden_output_data[0:16]; // Buffer for Expected Output Hex
+    reg [1027:0] read_back_data    [0:16]; // Buffer for Read Result
 
     integer i;
 
@@ -151,6 +154,8 @@ module softmax_tester(
 
             o_ext_cenb  = 1'b0;
             o_ext_addrb = 5'd0;
+
+            o_depth     = DEPTH; // Set Depth to 12 for this test
         end
     endtask
 
@@ -197,7 +202,7 @@ module softmax_tester(
             $display("[Tester] Writing Input Data to BRAM...");
             @(posedge i_clk);
             
-            for (i=0; i < INPUT_DEPTH; i=i+1) begin
+            for (i=0; i < DEPTH; i=i+1) begin
                 o_ext_cena  = 1'b1; // Chip Enable
                 o_ext_wea   = 1'b1; // Write Enable
                 o_ext_addra = i;
@@ -224,11 +229,11 @@ module softmax_tester(
             $display("[Tester] Reading Output Data from BRAM (Addr 12~23)...");
             
             // BRAM_FSM wrote results to 12~23
-            for (i=0; i < OUTPUT_DEPTH; i=i+1) begin
+            for (i=0; i < DEPTH; i=i+1) begin
                 // 1. Issue Read Command (Cycle 0)
                 @(posedge i_clk);
                 o_ext_cenb  = 1'b1;
-                o_ext_addrb = i + 12; // Output starts at addr 12
+                o_ext_addrb = i; // Output starts at addr 12
                 
                 // 2. Wait for Latency (Cycle 1)
                 @(posedge i_clk);

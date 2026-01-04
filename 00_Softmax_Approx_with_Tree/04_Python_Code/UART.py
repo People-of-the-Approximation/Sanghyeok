@@ -6,12 +6,11 @@ import os
 SER_PORT = "COM3"
 BAUD_RATE = 115200
 TIMEOUT = 10
+DEPTH_VAL = 11  # [추가] FPGA로 먼저 보낼 Depth 값 (0~255, 1바이트)
 
 # 파일 경로 (절대 경로 권장)
-# 입력 파일 (읽기용)
 INPUT_FILE = r"C:\Users\PSH\DigitalCircuit\Softmax_Design\00_Softmax_Approx_with_Tree\07_top_module\input_1028b.hex"
-# 출력 파일 (저장용) - 여기에 결과가 저장됩니다.
-OUTPUT_FILE = r"C:\Users\PSH\DigitalCircuit\Softmax_Design\00_Softmax_Approx_with_Tree\07_top_module\output_1028b.hex"
+OUTPUT_FILE = r"C:\Users\PSH\DigitalCircuit\Softmax_Design\00_Softmax_Approx_with_Tree\07_top_module\output_1028b_2.hex"
 
 
 def main():
@@ -34,11 +33,22 @@ def main():
 
     # 3. 데이터 전송 (Input -> FPGA)
     print("\n📤 Sending data to FPGA...")
+
+    # [수정] 3-1. Depth 1바이트 먼저 전송
+    print(f"   Sending Depth Value: {DEPTH_VAL}")
+    ser.write(bytes([DEPTH_VAL]))
+    time.sleep(0.02)  # 안정성을 위한 딜레이
+
+    # 3-2. 실제 데이터 전송
     for i, hex_str in enumerate(lines):
         val = int(hex_str, 16)
         byte_array = val.to_bytes(129, byteorder="big")  # 129 bytes sending
         ser.write(byte_array)
         time.sleep(0.02)  # 안정성을 위한 딜레이
+        if (i + 1) % 4 == 0:
+            print(f"   Sent {i + 1} lines...")
+
+    print("✅ Transmission Complete.")
 
     # 4. 데이터 수신 (FPGA -> Output)
     expected_bytes = 12 * 129
@@ -66,7 +76,6 @@ def main():
                 chunk = rx_bytes[i * 129 : (i + 1) * 129]
 
                 # 2. 바이너리 -> Hex 문자열 변환 (대문자)
-                # chunk.hex()는 바이트를 '5013e0...' 같은 문자열로 바꿔줍니다.
                 hex_str = chunk.hex().upper()
 
                 # 3. 파일에 쓰기
