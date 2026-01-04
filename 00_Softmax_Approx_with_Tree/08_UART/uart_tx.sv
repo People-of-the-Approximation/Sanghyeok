@@ -9,7 +9,7 @@ module uart_tx (
     output  reg       o_tx_serial,
     output  reg       o_tx_done
 );
-    localparam BAUD_RATE    = 11'd391; 
+    localparam BAUD_RATE    = 11'd868;
     localparam IDLE         = 3'b000;
     localparam TX_START_BIT = 3'b001;
     localparam TX_DATA_BITS = 3'b010;
