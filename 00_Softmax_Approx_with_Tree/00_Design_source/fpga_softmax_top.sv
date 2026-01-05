@@ -8,10 +8,11 @@ module fpga_softmax_top(
     output wire       o_txd,
 
     // Debug LEDs
-    output wire [3:0] o_led
+    output wire [3:0] o_led,
+    output wire       o_led_busy
 );
     wire i_rst;
-    assign i_rst = ~i_rstn; 
+    assign i_rst = ~i_rstn;
 
     wire        w_rx_done;
     wire [7:0]  w_rx_data;
@@ -93,4 +94,5 @@ module fpga_softmax_top(
         .o_ext_doutb(ctrl_doutb)
     );
 
+    assign o_led_busy = core_busy;
 endmodule
