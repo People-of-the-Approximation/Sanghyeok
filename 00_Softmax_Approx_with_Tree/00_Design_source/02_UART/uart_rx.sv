@@ -17,7 +17,7 @@ module uart_rx (
 
     reg  [2:0] r_state;
     
-    localparam BAUD_RATE    = 11'd868; // 100MHz / 115200bps = 868
+    localparam BAUD_RATE    = 11'd868;
     localparam IDLE         = 3'b000;
     localparam RX_START_BIT = 3'b001;
     localparam RX_DATA_BITS = 3'b010;

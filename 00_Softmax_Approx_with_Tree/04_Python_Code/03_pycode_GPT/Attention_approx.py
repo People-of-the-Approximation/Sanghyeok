@@ -10,14 +10,16 @@ FPGA_MAX_FRAME_DEPTH = 128
 
 def _pack_params(L: int):
     # 길이에 따른 패킹 파라미터 결정
-    if not (1 <= L <= 768):
-        raise ValueError("Length must be between 1 and 768.")
+    if not (1 <= L <= 64):
+        raise ValueError("Length must be between 1 and 64.")
     if L <= 16:
         return 16, 4  # 16개씩 4묶음 (Mode 0)
     elif L <= 32:
         return 32, 2  # 32개씩 2묶음 (Mode 1)
-    else:
+    elif L <= 64:
         return 64, 1  # 64개씩 1묶음 (Mode 2)
+    else:
+        return 64, 1  # 기본값
 
 
 def softmax_FPGA_UART_batch(
@@ -127,9 +129,9 @@ def attention(
     assert Nq == Nk and d_kq == d_kk, "Dim Error: Q,K mismatch"
     assert Nv == Nk, "Dim Error: V rows must match K rows"
     # 하드웨어 제약사항 (64 이하만 처리)
-    if not (1 <= Nk <= 768):
+    if not (1 <= Nk <= 64):
         # 64보다 크면 SW fallback 혹은 에러 처리해야 함. 여기서는 에러 발생.
-        raise ValueError(f"Length N must be between 1 and 768 (got {Nk}).")
+        raise ValueError(f"Length N must be between 1 and 64 (got {Nk}).")
 
     d_k = d_kq
 
