@@ -101,7 +101,7 @@ def evaluate_SST2():
     print("Starting SST-2 Evaluation with FPGA...")
 
     # [테스트용] 처음 50개만 수행 (전체 실행 시 .select(range(50)) 제거)
-    for i, item in enumerate(dataset.select(range(50))):
+    for i, item in enumerate(dataset.select(range(51, 101))):
         inputs = tokenizer(item["sentence"], return_tensors="pt", truncation=True)
         label = item["label"]
 
@@ -124,7 +124,7 @@ def evaluate_SST2():
         same_approx = "O" if pred_base == pred_approx else "X"
 
         print(
-            f"[{i:3d}] L={L:3d}  Base:{pred_base}  Approx:{pred_approx}  Label:{label}  Match {same_approx}"
+            f"[{i+50:3d}] L={L:3d}  Base:{pred_base}  Approx:{pred_approx}  Label:{label}  Match {same_approx}"
         )
 
     # 결과 출력 (50개 기준 통계)

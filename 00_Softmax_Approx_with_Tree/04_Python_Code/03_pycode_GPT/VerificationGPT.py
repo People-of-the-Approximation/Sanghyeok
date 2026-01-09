@@ -5,7 +5,6 @@ import torch
 import numpy as np
 from transformers.models.gpt2.modeling_gpt2 import GPT2Attention
 
-# [핵심] BERT 프로젝트에서 검증된 배치 전송 모듈 사용
 from Attention_approx import softmax_FPGA_UART_batch
 
 
@@ -82,7 +81,7 @@ class GPT2AttentionSoftmaxApprox(GPT2Attention):
 
         # 미래 토큰의 점수를 매우 낮은 값(-1e4)으로 설정하여 Softmax에서 0이 되게 함
         mask_value = torch.tensor(
-            -32, dtype=attn_weights.dtype, device=attn_weights.device
+            -1e4, dtype=attn_weights.dtype, device=attn_weights.device
         )
         attn_weights = torch.where(causal_mask, attn_weights, mask_value)
 
@@ -92,8 +91,8 @@ class GPT2AttentionSoftmaxApprox(GPT2Attention):
 
         want_attn = output_attentions or self.force_store_attn
 
-        # 4. 하드웨어 가속 분기 (길이 64 이하일 때만)
-        if (self.ser is not None) and (Tk <= 64):
+        # 4. 하드웨어 가속 분기 (길이 768 이하일 때만)
+        if (self.ser is not None) and (Tk <= 768):
             # === HW 가속 시작 ===
             attn_np = attn_weights.detach().cpu().numpy().astype(np.float64)
 
@@ -127,7 +126,7 @@ class GPT2AttentionSoftmaxApprox(GPT2Attention):
                 print(f"HW Fail: {e}")
                 attn_weights = torch.softmax(attn_weights, dim=-1)
         else:
-            # SW 수행 (Tk > 64 이거나 Serial 없을 때)
+            # SW 수행 (Tk > 768 이거나 Serial 없을 때)
             attn_weights = torch.softmax(attn_weights, dim=-1)
 
         attn_probs = self.attn_dropout(attn_weights)

@@ -1,51 +1,23 @@
+# Attention_approx.py
 import numpy as np
 import serial
 import time
 from UART_base import build_softmax_frame, send_exact, read_exact, q610_bytes_to_floats
 
-FPGA_MAX_FRAME_DEPTH = 128
+# FPGA 메모리 한계 (안전하게 64로 설정)
+FPGA_MAX_FRAME_DEPTH = 64
 
 
 def _pack_params(L: int):
-    if not (1 <= L <= 768):
-        raise ValueError("Length must be between 1 and 768.")
+    # 길이에 따른 패킹 파라미터 결정
+    if not (1 <= L <= 64):
+        raise ValueError("Length must be between 1 and 64.")
     if L <= 16:
-        return 16, 4
+        return 16, 4  # 16개씩 4묶음 (Mode 0)
     elif L <= 32:
-        return 32, 2
+        return 32, 2  # 32개씩 2묶음 (Mode 1)
     else:
-        return 64, 1
-
-
-def _length_mode(L: int):
-    if L <= 16:
-        return 0
-    elif L <= 32:
-        return 1
-    elif L <= 64:
-        return 2
-    elif L <= 128:
-        return 3
-    elif L <= 192:
-        return 4
-    elif L <= 256:
-        return 5
-    elif L <= 320:
-        return 6
-    elif L <= 384:
-        return 7
-    elif L <= 448:
-        return 8
-    elif L <= 512:
-        return 9
-    elif L <= 576:
-        return 10
-    elif L <= 640:
-        return 11
-    elif L <= 704:
-        return 12
-    else:
-        return 13
+        return 64, 1  # 64개씩 1묶음 (Mode 2)
 
 
 def softmax_FPGA_UART_batch(
@@ -63,9 +35,18 @@ def softmax_FPGA_UART_batch(
     if any(int(s.shape[0]) != L for s in seqs):
         raise ValueError("All sequences must have the same length.")
 
+    # 1. 패킹 전략 수립
     block_size, max_pack = _pack_params(L)
-    mode_val = _length_mode(L)
 
+    # FPGA Mode 값 결정
+    if L <= 16:
+        mode_val = 0
+    elif L <= 32:
+        mode_val = 1
+    else:
+        mode_val = 2
+
+    # 2. 데이터 패킹 (Packing)
     payloads = []
     meta_info = []
 
@@ -81,30 +62,39 @@ def softmax_FPGA_UART_batch(
         payloads.append(payload)
         meta_info.append(G)
 
+    # 3. 배치 전송 및 수신
     final_results = []
 
+    # FPGA 메모리 한계만큼 끊어서 처리
     for i in range(0, len(payloads), FPGA_MAX_FRAME_DEPTH):
         batch_payloads = payloads[i : i + FPGA_MAX_FRAME_DEPTH]
         batch_meta = meta_info[i : i + FPGA_MAX_FRAME_DEPTH]
 
         num_frames_to_send = len(batch_payloads)
 
+        # [핵심] Depth Byte 전송: (보낼 프레임 수 - 1)
         depth_byte = num_frames_to_send - 1
         ser.write(bytes([depth_byte]))
-        time.sleep(0.005)
+        time.sleep(0.02)  # 상태 전이 대기
 
+        # 프레임 연속 전송
         for payload in batch_payloads:
             frame = build_softmax_frame(payload, header_val=mode_val, endian="big")
             ser.write(frame)
-            time.sleep(0.001)
+            time.sleep(0.002)  # 안정성 확보
 
+        # 결과 수신 (프레임 수 * 129바이트)
         expected_bytes = num_frames_to_send * 129
         rx_data = read_exact(ser, expected_bytes, deadline_s=deadline_s)
 
+        # 결과 언패킹
         for row_idx in range(num_frames_to_send):
+            # 129바이트 단위로 자르기
             chunk_bytes = rx_data[row_idx * 129 : (row_idx + 1) * 129]
+            # 실수 변환
             probs64 = q610_bytes_to_floats(chunk_bytes, endian="big")
 
+            # 원래 시퀀스로 분리
             num_seqs_in_row = batch_meta[row_idx]
             for g in range(num_seqs_in_row):
                 start = g * block_size
