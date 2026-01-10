@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Hardware Accelerator Verification</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f9; color: #333; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 800px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #2c3e50; margin-bottom: 30px; }
+        .input-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; }
+        textarea { width: 100%; height: 80px; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; resize: vertical; box-sizing: border-box;}
+        .model-select { display: flex; gap: 20px; margin-bottom: 20px; }
+        .radio-label { font-weight: normal; cursor: pointer; display: flex; align-items: center; gap: 5px;}
+        button { width: 100%; padding: 12px; background-color: #3498db; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; transition: background 0.3s; }
+        button:hover { background-color: #2980b9; }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        
+        .result-box { margin-top: 30px; display: none; }
+        .result-card { background: #ecf0f1; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 5px solid #95a5a6; }
+        .result-header { font-weight: bold; margin-bottom: 5px; display: flex; justify-content: space-between; }
+        .result-content { font-family: 'Courier New', Courier, monospace; background: #fff; padding: 10px; border-radius: 4px; white-space: pre-wrap; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; color: white; }
+        .badge-cpu { background-color: #7f8c8d; }
+        .badge-hw { background-color: #e67e22; }
+        
+        .match-status { text-align: center; padding: 10px; border-radius: 6px; font-weight: bold; margin-top: 10px; }
+        .match-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .match-fail { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+        .loader { text-align: center; margin-top: 20px; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>AI Hardware Verification</h1>
+
+    <div class="input-group">
+        <label for="inputText">Input Text</label>
+        <textarea id="inputText" placeholder="Enter text here... (e.g., 'The movie was fantastic' or 'The future of AI is')"></textarea>
+    </div>
+
+    <div class="model-select">
+        <label class="radio-label">
+            <input type="radio" name="model" value="bert" checked> BERT (Sentiment Analysis)
+        </label>
+        <label class="radio-label">
+            <input type="radio" name="model" value="gpt2"> GPT-2 (Text Generation)
+        </label>
+    </div>
+
+    <button id="runBtn" onclick="runInference()">Run Inference</button>
+    
+    <div class="loader" id="loader">Processing on Hardware... Please wait.</div>
+
+    <div class="result-box" id="resultBox">
+        <div class="result-card" style="border-left-color: #7f8c8d;">
+            <div class="result-header">
+                <span>Baseline (CPU)</span>
+                <span class="badge badge-cpu" id="baseTime">0.00s</span>
+            </div>
+            <div class="result-content" id="baseResult"></div>
+        </div>
+
+        <div class="result-card" style="border-left-color: #e67e22;">
+            <div class="result-header">
+                <span>Approximation (Hardware)</span>
+                <span class="badge badge-hw" id="approxTime">0.00s</span>
+            </div>
+            <div class="result-content" id="approxResult"></div>
+        </div>
+
+        <div id="matchStatus" class="match-status"></div>
+    </div>
+</div>
+
+<script>
+    async function runInference() {
+        const text = document.getElementById('inputText').value;
+        const model = document.querySelector('input[name="model"]:checked').value;
+        const btn = document.getElementById('runBtn');
+        const loader = document.getElementById('loader');
+        const resultBox = document.getElementById('resultBox');
+
+        if (!text) {
+            alert("Please enter some text.");
+            return;
+        }
+
+        // UI 초기화
+        btn.disabled = true;
+        loader.style.display = 'block';
+        resultBox.style.display = 'none';
+
+        try {
+            const response = await fetch('/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text, model_type: model })
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                alert("Error: " + data.error);
+                return;
+            }
+
+            // 결과 바인딩
+            document.getElementById('baseResult').textContent = data.baseline_result;
+            document.getElementById('baseTime').textContent = data.baseline_time;
+            document.getElementById('approxResult').textContent = data.approx_result;
+            document.getElementById('approxTime').textContent = data.approx_time;
+
+            const matchDiv = document.getElementById('matchStatus');
+            if (data.match) {
+                matchDiv.textContent = "RESULT: MATCH ✓";
+                matchDiv.className = "match-status match-success";
+            } else {
+                matchDiv.textContent = "RESULT: MISMATCH ✗";
+                matchDiv.className = "match-status match-fail";
+            }
+
+            resultBox.style.display = 'block';
+
+        } catch (error) {
+            console.error(error);
+            alert("Failed to communicate with server.");
+        } finally {
+            btn.disabled = false;
+            loader.style.display = 'none';
+        }
+    }
+</script>
+
+</body>
+</html>
