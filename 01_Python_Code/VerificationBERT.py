@@ -1,4 +1,5 @@
 from typing import Optional, Tuple
+import serial
 import torch
 import numpy as np
 import datasets
@@ -6,8 +7,6 @@ from transformers import BertTokenizer, BertForSequenceClassification
 from transformers.models.bert.modeling_bert import BertSelfAttention
 from attention_approx import attention
 from softmax_batch import open_serial, close_serial
-
-ser = open_serial("COM3", baud=115200, timeout=1.0)
 
 
 class BertSelfAttentionSoftmaxApprox(BertSelfAttention):
@@ -113,9 +112,11 @@ def get_last_attention_matrix(model, layer=0, head=0):
     return attn[0, head]
 
 
-def build_models_sst2(device="cpu"):
-    tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+def build_model_BERT(ser: serial.Serial):
+    device = "cpu"
 
+    print(f"Loading BERT model for SST-2...")
+    tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
     baseline_model = (
         BertForSequenceClassification.from_pretrained(
             "textattack/bert-base-uncased-SST-2"
@@ -123,7 +124,6 @@ def build_models_sst2(device="cpu"):
         .to(device)
         .eval()
     )
-
     approx_model = (
         BertForSequenceClassification.from_pretrained(
             "textattack/bert-base-uncased-SST-2"
@@ -131,13 +131,14 @@ def build_models_sst2(device="cpu"):
         .to(device)
         .eval()
     )
-
     replace_self_attention(approx_model, BertSelfAttentionSoftmaxApprox)
+    set_serial_to_model(approx_model, ser)
 
-    return tokenizer, baseline_model, approx_model
+    return tokenizer, baseline_model, approx_model, device
 
 
 def evaluate_SST2():
+    ser = open_serial("COM3", baud=115200, timeout=1.0)
     dataset = datasets.load_dataset("glue", "sst2", split="validation")
     tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
 
@@ -195,8 +196,8 @@ def evaluate_SST2():
     print(
         f"Prediction Match Rate   : {match_count_approx/total*100:.2f}% ({match_count_approx}/{total})"
     )
+    close_serial(ser)
 
 
 if __name__ == "__main__":
     evaluate_SST2()
-    close_serial(ser)

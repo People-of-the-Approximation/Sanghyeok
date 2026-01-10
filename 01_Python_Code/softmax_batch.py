@@ -161,19 +161,15 @@ def split_depths(
 
 
 def floats64_to_row_bytes(payload64_f32: np.ndarray, *, header_mode: int) -> bytes:
-    """
-    row(129B) = header(1B) + payload(128B)
-    payload: 64 * int16(Q6.10), big-endian
-    header: 하위 4비트에 mode(0..15)
-    """
     x = np.asarray(payload64_f32, dtype=np.float64)
     if x.shape != (64,):
         raise ValueError("payload must be shape (64,)")
+    x = np.nan_to_num(x, nan=0.0)
+    scaled_f = x * SCALE
+    scaled_f = np.clip(scaled_f, I16_MIN, I16_MAX)
+    payload_int16 = np.rint(scaled_f).astype(np.int16)
+    payload_bytes = payload_int16.astype(">i2", copy=False).tobytes()
 
-    scaled = np.rint(x * SCALE).astype(np.int32)
-    scaled = np.clip(scaled, I16_MIN, I16_MAX).astype(np.int16)
-
-    payload_bytes = scaled.astype(">i2", copy=False).tobytes()
     if len(payload_bytes) != 128:
         raise RuntimeError(f"payload_bytes must be 128, got {len(payload_bytes)}")
 
@@ -195,10 +191,6 @@ def softmax_batch(
     pad_value: float = -32.0,
     timeout_s: float = 10.0,
 ) -> list[np.ndarray]:
-    """
-    scores_list: 각 scores shape (L,)
-    return: list of probs, 각 shape (L,)
-    """
     if not scores_list:
         return []
 
@@ -222,7 +214,7 @@ def softmax_batch(
 
             for g, vec in enumerate(chunk):
                 mini = np.full((block_size,), pad_value, dtype=np.float32)
-                mini[:L] = vec  # L <= block_size
+                mini[:L] = vec
                 start = g * block_size
                 payload64[start : start + block_size] = mini
 

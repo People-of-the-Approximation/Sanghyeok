@@ -11,8 +11,6 @@ from softmax_batch import open_serial, close_serial, softmax_batch
 SERIAL_PORT = "COM3"
 BAUD_RATE = 115200
 
-ser = open_serial(SERIAL_PORT, baud=BAUD_RATE, timeout=1.0)
-
 
 class GPT2AttentionSoftmaxApprox(GPT2Attention):
 
@@ -125,7 +123,22 @@ def replace_gpt2_attention(model: GPT2LMHeadModel, ser_instance):
     print(f"Replaced {count} attention layers with Hardware-Approximated version.")
 
 
+def build_model_GPT2(ser: serial.Serial):
+    device = "cpu"
+    model_name = "gpt2"
+
+    print(f"Loading {model_name} model...")
+    tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+    tokenizer.pad_token = tokenizer.eos_token
+
+    base_model = GPT2LMHeadModel.from_pretrained(model_name).to(device).eval()
+    approx_model = GPT2LMHeadModel.from_pretrained(model_name).to(device).eval()
+    replace_gpt2_attention(approx_model, ser)
+    return tokenizer, base_model, approx_model, device
+
+
 def run_interactive_verification():
+    ser = open_serial(SERIAL_PORT, baud=BAUD_RATE, timeout=1.0)
     device = "cpu"
     model_name = "gpt2"
 
@@ -186,11 +199,9 @@ def run_interactive_verification():
             break
         except Exception as e:
             print(f"\nAn error occurred: {e}")
+    close_serial(ser)
+    print("Serial port closed.")
 
 
 if __name__ == "__main__":
-    try:
-        run_interactive_verification()
-    finally:
-        close_serial(ser)
-        print("Serial port closed.")
+    run_interactive_verification()
