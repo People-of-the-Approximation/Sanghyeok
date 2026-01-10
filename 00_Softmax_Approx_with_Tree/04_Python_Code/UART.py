@@ -6,11 +6,15 @@ import os
 SER_PORT = "COM3"
 BAUD_RATE = 115200
 TIMEOUT = 5
-DEPTH_VAL = 12  # Depth value to send to FPGA first (0~255, 1 byte)
+DEPTH_VAL = 23  # Depth value to send to FPGA first (0~255, 1 byte)
 
 # File paths (Absolute paths recommended)
-INPUT_FILE = r"C:\Users\PSH\DigitalCircuit\Softmax_Design\00_Softmax_Approx_with_Tree\07_top_module\input_1028b.hex"
-OUTPUT_FILE = r"C:\Users\PSH\DigitalCircuit\Softmax_Design\00_Softmax_Approx_with_Tree\07_top_module\output_1028b.hex"
+INPUT_FILE = (
+    r"C:\Users\PSH\DigitalCircuit\Softmax_Design\01_Python_Code\input_1028b.hex"
+)
+OUTPUT_FILE = (
+    r"C:\Users\PSH\DigitalCircuit\Softmax_Design\01_Python_Code\output_1028b.hex"
+)
 
 
 def main():
